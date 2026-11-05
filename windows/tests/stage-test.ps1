@@ -2,7 +2,7 @@ param([string]$Stage, [string]$Cfg)
 # start a packaged folder via its CherryTree.exe launcher, bare PATH, given (isolated) profile; print PID
 $base = (Join-Path $env:TEMP 'ct-test')
 $env:PATH = 'C:\Windows\System32;C:\Windows'
-$env:XDG_CONFIG_HOME = "$base\$Cfg"
+$env:APPDATA = "$base\$Cfg"   # settings: %APPDATA%\CherryTree
 $env:DBUS_SESSION_BUS_ADDRESS = "tcp:host=127.0.0.1,port=9"  # run on its own, never hand files to an open CherryTree
 $sw = [Diagnostics.Stopwatch]::StartNew()
 Start-Process -FilePath "$Stage\CherryTree.exe" -ArgumentList @("`"$base\Demo Notes.ctd`"")

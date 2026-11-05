@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs everything needed to build CherryTree (Kali look) for Windows.
+# Installs everything needed to build CherryTree for Windows.
 # Run inside an "MSYS2 UCRT64" shell (or via build-windows.sh from WSL).
 set -euo pipefail
 

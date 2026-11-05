@@ -12,12 +12,13 @@ ManifestDPIAware true
 
 !define APP_NAME     "CherryTree"
 !define APP_EXE      "ucrt64\bin\cherrytree.exe"
-!define UNINST_KEY   "Software\Microsoft\Windows\CurrentVersion\Uninstall\CherryTreeKali"
+!define UNINST_KEY   "Software\Microsoft\Windows\CurrentVersion\Uninstall\CherryTree"
+!define APP_KEY      "Software\CherryTree"
 
 Name "${APP_NAME} ${CT_VERSION}"
 OutFile "${OUT_FILE}"
 InstallDir "$LOCALAPPDATA\Programs\CherryTree"
-InstallDirRegKey HKCU "Software\CherryTreeKali" "InstallDir"
+InstallDirRegKey HKCU "${APP_KEY}" "InstallDir"
 Icon "${ICON_FILE}"
 UninstallIcon "${ICON_FILE}"
 BrandingText "CherryTree ${CT_VERSION}"
@@ -88,7 +89,7 @@ FunctionEnd
 Section "CherryTree" SecMain
   SectionIn RO
   Call CloseRunning
-  ; replace an older install cleanly (keeps user data: that lives in %LOCALAPPDATA%\cherrytree-kali)
+  ; replace an older install cleanly (keeps user data: that lives in %APPDATA%\CherryTree)
   RMDir /r "$INSTDIR\ucrt64"
   SetOutPath "$INSTDIR"
   File /r "${STAGE_DIR}\*.*"
@@ -97,14 +98,14 @@ Section "CherryTree" SecMain
   CreateShortCut "$SMPROGRAMS\CherryTree.lnk" "$INSTDIR\${APP_EXE}" "" "$INSTDIR\${APP_EXE}" 0
   Delete "$INSTDIR\CherryTree.cmd"  ; from older builds
 
-  WriteRegStr HKCU "Software\CherryTreeKali" "InstallDir" "$INSTDIR"
+  WriteRegStr HKCU "${APP_KEY}" "InstallDir" "$INSTDIR"
   WriteRegStr HKCU "${UNINST_KEY}" "DisplayName" "CherryTree ${CT_VERSION}"
   WriteRegStr HKCU "${UNINST_KEY}" "DisplayVersion" "${CT_VERSION}"
-  WriteRegStr HKCU "${UNINST_KEY}" "Publisher" "Giuseppe Penone"
+  WriteRegStr HKCU "${UNINST_KEY}" "Publisher" "Bisaam"
   WriteRegStr HKCU "${UNINST_KEY}" "DisplayIcon" '"$INSTDIR\${APP_EXE}",0'
   WriteRegStr HKCU "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${UNINST_KEY}" "UninstallString" '"$INSTDIR\uninstall.exe"'
-  WriteRegStr HKCU "${UNINST_KEY}" "URLInfoAbout" "https://www.giuspen.net/cherrytree/"
+  WriteRegStr HKCU "${UNINST_KEY}" "URLInfoAbout" "https://github.com/Bisaam/cherrytree"
   WriteRegDWORD HKCU "${UNINST_KEY}" "NoModify" 1
   WriteRegDWORD HKCU "${UNINST_KEY}" "NoRepair" 1
 
@@ -143,5 +144,5 @@ Section "Uninstall"
   Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"
   DeleteRegKey HKCU "${UNINST_KEY}"
-  DeleteRegKey HKCU "Software\CherryTreeKali"
+  DeleteRegKey HKCU "${APP_KEY}"
 SectionEnd

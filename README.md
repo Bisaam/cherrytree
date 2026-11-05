@@ -1,62 +1,64 @@
-# CherryTree with the Kali Linux™ look, for Windows
+# CherryTree for Windows
 
-![CherryTree 1.7.2 on Windows 11 with the Kali-Dark theme](screenshots/windows-1.7.2-kali-look.png)
+![CherryTree 1.7.2 on Windows 11](screenshots/windows-1.7.2.png)
 
-This is the real [CherryTree](https://github.com/giuspen/cherrytree) note-taking app (GPL-3.0), not a re-implementation. It's built for Windows and set up to look and behave the way it does on Kali Linux™: the Kali-Dark theme with its dark headerbar and round title buttons, Flat-Remix icons, Cantarell and Fira Code fonts, Linux-style font rendering, and Kali's editor colours. A macOS build is next.
+This is the real [CherryTree](https://github.com/giuspen/cherrytree) note-taking app (GPL-3.0), not a re-implementation, built for Windows. It's set up to look and feel like CherryTree on a Linux desktop:
 
-> Unofficial. It isn't made or endorsed by CherryTree's author (Giuseppe Penone), by OffSec or by the Kali Linux project. The official CherryTree for Windows is at [giuspen.net/cherrytree](https://www.giuspen.net/cherrytree/).
+* the **Cherry-Dark** theme, with a dark headerbar, round title buttons and the menubar inside the titlebar
+* **Flat-Remix** icons
+* **Cantarell** and **Fira Code** fonts with Linux-style font rendering
+* dark editor colours
+
+A macOS build is next.
+
+> Unofficial. It isn't made or endorsed by CherryTree's author (Giuseppe Penone). The official CherryTree for Windows is at [giuspen.net/cherrytree](https://www.giuspen.net/cherrytree/).
 
 ## Download
 
-Get the files from **[Releases](https://github.com/Bisaam/cherrytree/releases/latest)**. They need Windows 10 or 11, 64-bit, and no admin rights.
+| Version | Installer | Portable |
+|---|---|---|
+| **1.7.2**, the latest CherryTree | [cherrytree_1.7.2_win64_setup.exe](https://github.com/Bisaam/cherrytree/releases/download/v1.7.2/cherrytree_1.7.2_win64_setup.exe) | [cherrytree_1.7.2_win64_portable.zip](https://github.com/Bisaam/cherrytree/releases/download/v1.7.2/cherrytree_1.7.2_win64_portable.zip) |
+| **1.2.0**, the version Debian ships | [cherrytree_1.2.0_win64_setup.exe](https://github.com/Bisaam/cherrytree/releases/download/v1.2.0/cherrytree_1.2.0_win64_setup.exe) | [cherrytree_1.2.0_win64_portable.zip](https://github.com/Bisaam/cherrytree/releases/download/v1.2.0/cherrytree_1.2.0_win64_portable.zip) |
 
-| File | What it is |
-|---|---|
-| `cherrytree-kali_<version>_win64_setup.exe` | Installer. Installs per user (no admin), adds a Start-menu entry, optionally opens `.ctb/.ctx/.ctd/.ctz` files with CherryTree, and uninstalls cleanly from *Apps & features*. |
-| `cherrytree-kali_<version>_win64_portable.zip` | Portable. Unzip anywhere (a USB stick works) and double-click `CherryTree.exe`. Everything it needs is inside the folder. |
+All files are also on the [Releases](https://github.com/Bisaam/cherrytree/releases) page, one release per version. Both need Windows 10 or 11, 64-bit, and no admin rights.
 
-Two versions are released:
-
-* **1.7.2**: the latest CherryTree release.
-* **1.2.0**: the version Kali Linux ships today.
+* **Installer**: installs per user, adds a Start-menu entry, optionally opens `.ctb/.ctx/.ctd/.ctz` files with CherryTree, and uninstalls cleanly from *Apps & features*.
+* **Portable**: unzip anywhere (a USB stick works) and double-click `CherryTree.exe`. Everything it needs is inside the folder.
 
 The files aren't code-signed, so Windows SmartScreen may say "Windows protected your PC". Click *More info*, then *Run anyway*.
 
-Notebooks open both ways between this build and CherryTree on Kali (same `.ctb` / `.ctd` formats).
+Settings are kept in `%APPDATA%\CherryTree`, separate from a regular CherryTree install, so the two can be used side by side. Notebooks use the normal CherryTree formats (`.ctb` / `.ctd` / `.ctx` / `.ctz`) and open in any CherryTree.
 
 | | |
 |---|---|
-| ![CherryTree 1.2.0, the version Kali ships](screenshots/windows-1.2.0-kali-look.png) | ![Installer](screenshots/installer-1.2.0.png) |
+| ![CherryTree 1.2.0](screenshots/windows-1.2.0.png) | ![Installer](screenshots/installer-1.2.0.png) |
 
-## What makes it look like Kali
+## What's in it
 
-CherryTree is a GTK3 app, so the "Kali version" isn't a fork. It's stock CherryTree plus what Kali's `kali-themes` package adds around it. This project bundles those same pieces:
+| Piece | Here |
+|---|---|
+| CherryTree 1.2.0 / 1.7.2 from the upstream source, without the "Check Newer Version" menu item (Debian's patch) | `patches/<version>/0001-*` |
+| Cherry-Dark GTK theme: dark headerbar, round title buttons | `look/themes/` |
+| Cherry-Dark / Cherry-Light editor colour schemes | `look/styles/` |
+| Flat-Remix-Blue-Dark icons (the subset GTK uses) | `look/icons/` |
+| Cantarell 11, Fira Code Medium 10, hintslight + RGB subpixel rendering | `look/fonts/` + fontconfig conf |
+| Default settings: dark tree and editor colours, fonts, menubar in the titlebar | `look/config/config.cfg`, used on first run |
 
-| On Kali | Where it comes from | Here |
-|---|---|---|
-| CherryTree 1.2.0 + Debian patch removing "Check Newer Version" | Debian `cherrytree` package | `patches/<version>/0001-*` |
-| Dark editor/tree colours, Cantarell / Fira Code fonts | `kali-themes: /etc/skel/.config/cherrytree/config.cfg` | `kali-look/config/config.cfg`, used as the first-run config |
-| `Kali-Dark` editor colour scheme | `kali-themes: share/gtksourceview-4/styles` | `kali-look/styles/` |
-| `Kali-Dark` GTK theme (dark headerbar, round title buttons) | `kali-themes: share/themes/Kali-Dark` | `kali-look/themes/`, with the dragon logo in the headerbar replaced by a transparent image (see Licences) |
-| `Flat-Remix-Blue-Dark` icons | `kali-themes: share/icons` | `kali-look/icons/` (subset GTK uses) |
-| Cantarell 11, Fira Code Medium 10, hintslight + RGB subpixel | Xfce xsettings, `fonts-cantarell`, `fonts-firacode` | `kali-look/fonts/` + fontconfig conf |
-| Menubar inside the titlebar, cherry icon left, buttons right | CherryTree Linux default + Xfce decoration layout | `config.cfg [state]`, `gtk-3.0/settings.ini` |
+Source changes for Windows (and macOS) are in `patches/<version>/0002-bundled-look.patch`:
 
-Windows-specific source changes are in `patches/<version>/0002-kali-look.patch`:
-
-* keep settings in their own folder, `%LOCALAPPDATA%\cherrytree-kali`, so a `config.cfg` or `icons\` folder left by a regular CherryTree install can't override the Kali look; on first run it starts from Kali's `config.cfg`
-* use fontconfig + FreeType text rendering (`PANGOCAIRO_BACKEND=fc`) so fonts render like on Kali, not like ClearType
+* keep settings in their own folder, `%APPDATA%\CherryTree`, so a `config.cfg` or `icons\` folder left by a regular CherryTree install can't override the look; on first run it starts from the bundled defaults
+* use fontconfig + FreeType text rendering (`PANGOCAIRO_BACKEND=fc`) so fonts render like on Linux, not like ClearType
 * re-apply `etc/gtk-3.0/settings.ini` at application priority, because GTK on Windows otherwise forces the Windows UI font (Segoe UI 9) and full hinting over it
 * let the GTK theme draw every titlebar (`GTK_CSD=1`)
 * fix the upstream bug where a headerbar window can't be minimised by clicking its taskbar button ([giuspen/cherrytree#1917](https://github.com/giuspen/cherrytree/issues/1917))
 
 `CHERRYTREE_NATIVE_LOOK=1` turns the environment and font overrides off.
 
-`patches/1.2.0/0000-toolchain-compat.patch` backports three upstream fixes 1.2.0 needs on today's MSYS2: `GStatBuf` (GLib 2.90), a missing `windows.h`, and recognising the `ucrt64` install layout. Without the last one CherryTree can't find its own data folder, so styles, the Kali config and language specs go missing.
+`patches/1.2.0/0000-toolchain-compat.patch` backports three upstream fixes 1.2.0 needs on today's MSYS2: `GStatBuf` (GLib 2.90), a missing `windows.h`, and recognising the `ucrt64` install layout. Without the last one CherryTree can't find its own data folder, so styles, the default settings and language specs go missing.
 
-### Bringing your Kali settings over
+### Bringing your settings from Linux
 
-The Windows build starts from Kali's defaults (Cantarell 11 notes). If you changed things on Kali, such as a bigger note font via Ctrl+mouse wheel, the toolbar or the tree width, copy `~/.config/cherrytree/config.cfg` from Kali to `%LOCALAPPDATA%\cherrytree-kali\config.cfg` while CherryTree is closed. The recent-file paths inside it point to `/home/kali/...`, so on first start CherryTree may say the last notebook can't be found; open your notebook with File › Open.
+To keep the font size, toolbar or tree width you use on Linux, copy `~/.config/cherrytree/config.cfg` to `%APPDATA%\CherryTree\config.cfg` while CherryTree is closed. The recent-file paths inside it point to Linux folders, so on first start CherryTree may say the last notebook can't be found; open your notebook with File › Open. If the editor colours look off afterwards, pick **Cherry-Dark** in Preferences › Rich Text and › Plain Text and Code.
 
 ## Build it yourself (Windows, driven from WSL)
 
@@ -74,7 +76,7 @@ Then, from this folder in WSL:
 ./build-windows.sh --run                    # build and start it
 ```
 
-Results land in `dist/` here and in `C:\msys64\opt\cherrytree-kali\release\`. The `release` folder only ever receives finished files: packages are written as `*.partial` and renamed when complete. The build fails if any DLL a packaged binary imports is neither in the package nor part of Windows, so a package that builds runs on a clean PC with nothing on `PATH`.
+Results land in `dist/` here and in `C:\msys64\opt\cherrytree\release\`. The `release` folder only ever receives finished files: packages are written as `*.partial` and renamed when complete. The build fails if any DLL a packaged binary imports is neither in the package nor part of Windows, so a package that builds runs on a clean PC with nothing on `PATH`.
 
 You can also run `windows/msys2-setup.sh` and `windows/msys2-build.sh` directly in an *MSYS2 UCRT64* terminal.
 
@@ -83,17 +85,21 @@ Both releases need `libxml++-2.6`, which MSYS2 dropped in Oct 2026. The build in
 ## Layout
 
 ```
-build-windows.sh        WSL driver (syncs to C:\msys64\opt\cherrytree-kali, runs MSYS2)
+build-windows.sh        WSL driver (syncs to C:\msys64\opt\cherrytree, runs MSYS2)
 windows/msys2-setup.sh  MSYS2 packages
 windows/msys2-build.sh  fetch tag, patch, build, package (portable zip + NSIS installer)
 windows/installer.nsi   installer
 windows/launcher/       CherryTree.exe launcher at the top of the portable folder
 windows/tests/          PowerShell checks (clean-PATH start, installer, screenshots) + demo notebook
 patches/<version>/      source patches
-kali-look/              theme, icons, fonts, editor styles, default config
+look/                   theme, icons, fonts, editor styles, default settings
 screenshots/
 ```
 
-## Licences
+## Credits and licences
 
-The build scripts and patches here are GPL-3.0 ([LICENSE](LICENSE)), the same as CherryTree. CherryTree and kali-themes (Kali-Dark theme, Flat-Remix icons, editor styles) are GPL-3.0. Cantarell and Fira Code are under the SIL OFL 1.1 (`kali-look/fonts/LICENSE-*`). Kali Linux™ and the Kali dragon logo are trademarks of OffSec. Kali's EULA asks that modified redistributions replace images containing the trademark, so the dragon in the Kali-Dark headerbar (`kali-look/themes/Kali-Dark/gtk-3.0/assets/kali-headerbar-logo*.png`) is a transparent image here. The name is used only to describe the look this build reproduces, and this project isn't affiliated with OffSec. See [kali-look/COPYRIGHT-kali-themes.txt](kali-look/COPYRIGHT-kali-themes.txt), the [Kali trademark policy](https://www.kali.org/docs/policy/trademark/) and the [EULA](https://www.kali.org/docs/policy/eula/EULA.txt).
+The build scripts and patches here are GPL-3.0 ([LICENSE](LICENSE)), the same as CherryTree.
+
+The Cherry-Dark GTK theme, the Cherry-Dark / Cherry-Light editor schemes, the Flat-Remix-Blue-Dark icons (by Daniel Ruiz de Alegría) and the default settings come from the kali-themes package (GPL-3.0, Copyright Offensive Security; see [look/COPYRIGHT-themes.txt](look/COPYRIGHT-themes.txt)). Here the theme and schemes are renamed, and the theme's headerbar logo is replaced by a transparent image.
+
+Cantarell and Fira Code are under the SIL OFL 1.1 (`look/fonts/LICENSE-*`).

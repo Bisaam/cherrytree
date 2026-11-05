@@ -14,9 +14,9 @@ Expand-Archive -Path $Zip -DestinationPath $dest
 $app = Get-ChildItem $dest -Directory | Select-Object -First 1
 "TOP-LEVEL: " + ((Get-ChildItem $app.FullName | ForEach-Object Name) -join ', ')
 $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
-$env:XDG_CONFIG_HOME = "$base\cfg-portable-fresh"
+$env:APPDATA = "$base\cfg-portable-fresh"   # settings: %APPDATA%\CherryTree
 $env:DBUS_SESSION_BUS_ADDRESS = "tcp:host=127.0.0.1,port=9"  # run on its own, never hand files to an open CherryTree
-if (Test-Path $env:XDG_CONFIG_HOME) { Remove-Item -Recurse -Force $env:XDG_CONFIG_HOME }
+if (Test-Path $env:APPDATA) { Remove-Item -Recurse -Force $env:APPDATA }
 $sw.Restart()
 Start-Process -FilePath "$($app.FullName)\CherryTree.exe" -ArgumentList @("`"$base\Demo Notes.ctd`"")
 $p = $null
@@ -28,8 +28,8 @@ while ($sw.Elapsed.TotalSeconds -lt 180) {
 if (-not $p -or $p.MainWindowHandle -eq 0) { "NO WINDOW after {0:N1}s" -f $sw.Elapsed.TotalSeconds; exit 2 }
 "WINDOW after {0:N1}s PID={1} title={2}" -f $sw.Elapsed.TotalSeconds, $p.Id, $p.MainWindowTitle
 Start-Sleep -Seconds 2
-$seeded = Get-Content "$env:XDG_CONFIG_HOME\cherrytree-kali\config.cfg" -ErrorAction SilentlyContinue | Select-String -SimpleMatch "rt_style_scheme=Kali-Dark"
-"KALI CONFIG SEEDED: " + [bool]$seeded
+$seeded = Get-Content "$env:APPDATA\CherryTree\config.cfg" -ErrorAction SilentlyContinue | Select-String -SimpleMatch "rt_style_scheme=Cherry-Dark"
+"DEFAULT CONFIG SEEDED: " + [bool]$seeded
 if ($KeepOpen) { return }
 Stop-Process -Id $p.Id -Force
 Start-Sleep -Seconds 2
