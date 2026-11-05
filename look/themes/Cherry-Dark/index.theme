@@ -1,0 +1,15 @@
+# Cherry-Dark: the Kali-Dark theme from kali-themes (GPL-3.0, see look/COPYRIGHT-themes.txt),
+# renamed, with the headerbar logo replaced by a transparent image.
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Cherry-Dark
+Comment=Dark GTK theme
+Encoding=UTF-8
+
+
+[X-GNOME-Metatheme]
+GtkTheme=Cherry-Dark
+MetacityTheme=Cherry-Dark
+IconTheme=Flat-Remix-Blue-Dark
+CursorTheme=Adwaita
+ButtonLayout=:minimize,maximize,close

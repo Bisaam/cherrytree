@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Build the Windows version of CherryTree (Kali look) from WSL.
+# Build the Windows version of CherryTree from WSL.
 # Drives MSYS2 on the Windows host (default C:\msys64, override with MSYS2_ROOT=D:\msys64).
 #
 #   ./build-windows.sh --setup            first time: update MSYS2, install build deps, then build
-#   ./build-windows.sh                    build CherryTree 1.2.0 (the version Kali ships)
+#   ./build-windows.sh                    build CherryTree 1.2.0 (the version Debian ships)
 #   ./build-windows.sh --version 1.7.2    build another version that has a patches/<version> set
 #   ./build-windows.sh --run              build, then start the portable app on Windows
 #   ./build-windows.sh --no-build --run   just start the last build
@@ -14,7 +14,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MSYS2_ROOT_WIN="${MSYS2_ROOT:-C:\\msys64}"
 MSYS2="$(wslpath -u "${MSYS2_ROOT_WIN}")"
-BUILD_MSYS_PATH="/opt/cherrytree-kali"          # inside MSYS2
+BUILD_MSYS_PATH="/opt/cherrytree"               # inside MSYS2
 BUILD_DIR="${MSYS2}${BUILD_MSYS_PATH}"         # same folder seen from WSL
 
 DO_SETUP=0
@@ -52,11 +52,11 @@ if [ "${DO_SETUP}" = 1 ]; then
   msys "pacman -Syuu --noconfirm"
 fi
 
-echo "==> sync project -> ${MSYS2_ROOT_WIN}\\opt\\cherrytree-kali"
+echo "==> sync project -> ${MSYS2_ROOT_WIN}\\opt\\cherrytree"
 mkdir -p "${BUILD_DIR}"
 # work/ and dist/ on the Windows side are kept between runs (incremental source checkout);
 # everything else is replaced so removed/renamed patches don't linger
-rm -rf "${BUILD_DIR}/patches" "${BUILD_DIR}/windows" "${BUILD_DIR}/kali-look"
+rm -rf "${BUILD_DIR}/patches" "${BUILD_DIR}/windows" "${BUILD_DIR}/look" "${BUILD_DIR}/macos"
 # (tar exit 1 = "file changed as we read it", e.g. an editor saving meanwhile: harmless here)
 { tar -C "${HERE}" --exclude=./ref --exclude=./dist --exclude=./work --exclude=./logs --exclude=./.git \
       --warning=no-file-changed -cf - . || [ $? -eq 1 ]; } \
@@ -73,14 +73,14 @@ if [ "${DO_BUILD}" = 1 ]; then
   mkdir -p "${HERE}/dist"
   # only the release files (dist/ may also hold a folder someone unzipped there)
   find "${BUILD_DIR}/dist" -maxdepth 1 -type f \( -name "*.zip" -o -name "*.exe" \) -exec cp -v {} "${HERE}/dist/" \;
-  # finished builds only: C:\msys64\opt\cherrytree-kali\release is never written while building
+  # finished builds only: C:\msys64\opt\cherrytree\release is never written while building
   "$(wslpath -u 'C:\Windows\System32\Robocopy.exe')" "$(wslpath -w "${BUILD_DIR}/dist")" \
     "$(wslpath -w "${BUILD_DIR}/release")" "*.zip" "*.exe" /NFL /NDL /NJH /NJS /NP >/dev/null || true
   echo "==> release: $(wslpath -w "${BUILD_DIR}/release")"
 fi
 
 if [ "${DO_RUN}" = 1 ]; then
-  EXE="$(ls -d "${BUILD_DIR}"/work/cherrytree-kali_*_win64/CherryTree.exe | tail -1)"
+  EXE="$(ls -d "${BUILD_DIR}"/work/cherrytree_*_win64/CherryTree.exe | tail -1)"
   echo "==> start $(wslpath -w "${EXE}") (PATH = Windows only, like on another PC)"
   # cd to a Windows dir first so cmd.exe doesn't start inside \\wsl.localhost
   ( cd "$(dirname "${EXE}")" && cmd.exe /c "set PATH=%SystemRoot%\\System32;%SystemRoot%&& start \"\" \"$(wslpath -w "${EXE}")\"" ) >/dev/null 2>&1

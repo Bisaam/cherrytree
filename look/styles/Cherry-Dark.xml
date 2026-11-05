@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Cherry-Dark: the Kali-Dark scheme from kali-themes (GPL-3.0, see look/COPYRIGHT-themes.txt), renamed -->
 
-<style-scheme id="Kali-Dark" name="Kali-Dark" version="1.0">
+<style-scheme id="Cherry-Dark" name="Cherry-Dark" version="1.0">
 	<author>Daniel Ruiz de Alegría</author>
-	<_description>Kali Dark colorscheme</_description>
+	<_description>Cherry Dark colour scheme</_description>
 
-	<!-- Kali-Dark colors -->
+	<!-- Cherry-Dark colors -->
 	<color name="background" value="#23252e"/>
 	<color name="current-line" value="#333"/>
 	<color name="selection" value="#111"/>

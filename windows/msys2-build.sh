@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Builds CherryTree with the Kali Linux look for Windows and packages it as
-#   dist/cherrytree-kali_<version>_win64_portable.zip   (unzip anywhere, double-click CherryTree.exe)
-#   dist/cherrytree-kali_<version>_win64_setup.exe      (per-user installer, no admin needed)
+# Builds CherryTree for Windows, with the bundled look (look/), and packages it as
+#   dist/cherrytree_<version>_win64_portable.zip   (unzip anywhere, double-click CherryTree.exe)
+#   dist/cherrytree_<version>_win64_setup.exe      (per-user installer, no admin needed)
 #
 # Run inside the MSYS2 UCRT64 environment (build-windows.sh does that for you from WSL):
 #   windows/msys2-build.sh [--version 1.2.0] [--no-installer] [--clean]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CT_VERSION="${CT_VERSION:-1.2.0}"          # 1.2.0 = the version Kali Linux ships
+CT_VERSION="${CT_VERSION:-1.2.0}"          # 1.2.0 = the version Debian ships
 MAKE_INSTALLER=1
 CLEAN=0
 JOBS="$(nproc)"
@@ -36,12 +36,12 @@ WORK="${ROOT}/work"
 SRC="${WORK}/cherrytree-${CT_VERSION}"
 BUILD="${WORK}/build-${CT_VERSION}"
 RTROOT="${WORK}/runtime-root"
-PKG_NAME="cherrytree-kali_${CT_VERSION}_win64"
+PKG_NAME="cherrytree_${CT_VERSION}_win64"
 STAGE="${WORK}/${PKG_NAME}"
 UCRT="${STAGE}/ucrt64"
 CT_SHARE="${UCRT}/usr/share/cherrytree"
 DIST="${ROOT}/dist"
-KALI="${ROOT}/kali-look"
+LOOK="${ROOT}/look"
 
 RUNTIME_PKGS=(
   "${P}-gtkmm3" "${P}-gtksourceview4" "${P}-sqlite3" "${P}-gspell" "${P}-curl" "${P}-uchardet"
@@ -176,20 +176,20 @@ cp "${SRC}"/hunspell/*.aff "${SRC}"/hunspell/*.dic "${UCRT}/share/hunspell/"
 # the ssl bundle is not populated correctly by --root installs (upstream note)
 rm -rf "${UCRT}/etc/ssl"; cp -r /ucrt64/etc/ssl "${UCRT}/etc/"
 
-# 5. Kali look -----------------------------------------------------------------------------------
-step "Kali look"
+# 5. Bundled look -----------------------------------------------------------------------------------
+step "bundled look"
 # GTK theme + icon theme + settings (gtk reads <prefix>/etc/gtk-3.0/settings.ini on Windows)
 mkdir -p "${UCRT}/share/themes" "${UCRT}/share/icons" "${UCRT}/etc/gtk-3.0"
-cp -r "${KALI}/themes/Kali-Dark" "${UCRT}/share/themes/"
-cp -r "${KALI}/icons/Flat-Remix-Blue-Dark" "${UCRT}/share/icons/"
-cp "${KALI}/gtk-3.0/settings.ini" "${UCRT}/etc/gtk-3.0/settings.ini"
-# editor colour schemes + first-run cherrytree config (the kali-themes /etc/skel defaults)
-cp "${KALI}"/styles/*.xml "${CT_SHARE}/styles/"
-cp "${KALI}/config/config.cfg" "${CT_SHARE}/data/config-kali.cfg"
+cp -r "${LOOK}/themes/Cherry-Dark" "${UCRT}/share/themes/"
+cp -r "${LOOK}/icons/Flat-Remix-Blue-Dark" "${UCRT}/share/icons/"
+cp "${LOOK}/gtk-3.0/settings.ini" "${UCRT}/etc/gtk-3.0/settings.ini"
+# editor colour schemes + first-run cherrytree config
+cp "${LOOK}"/styles/*.xml "${CT_SHARE}/styles/"
+cp "${LOOK}/config/config.cfg" "${CT_SHARE}/data/config-default.cfg"
 # fonts: Cantarell + Fira Code, found by fontconfig through a conf.d snippet
-mkdir -p "${UCRT}/share/fonts/cherrytree-kali" "${UCRT}/etc/fonts/conf.d"
-cp "${KALI}"/fonts/*.otf "${KALI}"/fonts/*.ttf "${KALI}"/fonts/LICENSE-*.txt "${UCRT}/share/fonts/cherrytree-kali/"
-cp "${KALI}/fonts/99-cherrytree-kali.conf" "${UCRT}/etc/fonts/conf.d/"
+mkdir -p "${UCRT}/share/fonts/cherrytree" "${UCRT}/etc/fonts/conf.d"
+cp "${LOOK}"/fonts/*.otf "${LOOK}"/fonts/*.ttf "${LOOK}"/fonts/LICENSE-*.txt "${UCRT}/share/fonts/cherrytree/"
+cp "${LOOK}/fonts/99-cherrytree-fonts.conf" "${UCRT}/etc/fonts/conf.d/"
 # caches
 ICON_CACHE_TOOL="$(command -v gtk-update-icon-cache || command -v gtk-update-icon-cache-3.0)"
 for theme in "${UCRT}"/share/icons/*/; do

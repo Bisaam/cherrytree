@@ -1,18 +1,18 @@
-# README screenshot: start a packaged folder with a fresh profile (Kali defaults + "Demo Notes.ctd"
+# README screenshot: start a packaged folder with a fresh profile (bundled defaults + "Demo Notes.ctd"
 # open, tree expanded, no folder in the title), capture its window, stop that process (by PID).
 param([Parameter(Mandatory)][string]$Stage, [Parameter(Mandatory)][string]$Out, [string]$Demo)
 if (-not $Demo) { $Demo = Join-Path $PSScriptRoot "Demo Notes.ctd" }
 $base = Join-Path $env:TEMP "ct-demo-shot"
 if (Test-Path $base) { Remove-Item -Recurse -Force $base }
-New-Item -ItemType Directory -Force "$base\cfg\cherrytree-kali" | Out-Null
+New-Item -ItemType Directory -Force "$base\cfg\CherryTree" | Out-Null
 Copy-Item $Demo "$base\Demo Notes.ctd"
 $doc = "$base\Demo Notes.ctd"
-$cfg = Get-Content -Raw "$Stage\ucrt64\usr\share\cherrytree\data\config-kali.cfg"
+$cfg = Get-Content -Raw "$Stage\ucrt64\usr\share\cherrytree\data\config-default.cfg"
 $cfg = $cfg -replace '(?m)^\[state\]\r?$', "[state]`r`ndoc_0=$($doc -replace '\\','\\')`r`nnodep_0=1:0`r`ncurs_0=0`r`nhpaned_pos=310`r`nwin_is_maximized=true"
 $cfg += "`r`n[tree]`r`nrest_exp_coll=1`r`n[misc]`r`nwin_title_doc_dir=false`r`n"
-[IO.File]::WriteAllText("$base\cfg\cherrytree-kali\config.cfg", $cfg, (New-Object Text.UTF8Encoding $false))  # no BOM: GKeyFile rejects it
+[IO.File]::WriteAllText("$base\cfg\CherryTree\config.cfg", $cfg, (New-Object Text.UTF8Encoding $false))  # no BOM: GKeyFile rejects it
 $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
-$env:XDG_CONFIG_HOME = "$base\cfg"
+$env:APPDATA = "$base\cfg"   # settings: %APPDATA%\CherryTree
 # CherryTree is single instance (GApplication over D-Bus): without a reachable session bus it runs on
 # its own, so a CherryTree the user has open never receives this test's file
 $env:DBUS_SESSION_BUS_ADDRESS = "tcp:host=127.0.0.1,port=9"

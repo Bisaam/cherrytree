@@ -1,34 +1,43 @@
-Subject: Kali look defaults for the Windows (and macOS) builds
+Subject: Bundled look and settings for the Windows and macOS builds
 
-- Windows/macOS: settings in <user config dir>/cherrytree-kali, seeded on first run from
-  <datadir>/data/config-kali.cfg (the kali-themes /etc/skel defaults)
-- Windows/macOS: default to fontconfig+FreeType text rendering (PANGOCAIRO_BACKEND=fc) like on Kali
-- Windows: default to client side decorations (GTK_CSD=1) so the Kali-Dark theme draws every titlebar
-- Windows: re-apply <prefix>/etc/gtk-3.0/settings.ini at application priority, as GDK otherwise
-  forces the Windows font (Segoe UI 9) and ClearType-style hinting over it
-- Windows: keep WS_MINIMIZEBOX|WS_SYSMENU on the CSD main window so the taskbar button minimises it
+- Windows/macOS: own settings folder, %APPDATA%\CherryTree / ~/Library/Application Support/CherryTree,
+  so a config.cfg / icons folder of a regular CherryTree install can't override the bundled look
+- first run: start from <datadir>/data/config-default.cfg (the bundled default settings)
+- Windows/macOS: default to fontconfig+FreeType text rendering (PANGOCAIRO_BACKEND=fc), as on Linux
+- Windows/macOS: default to client side decorations (GTK_CSD=1) so the bundled GTK theme draws every titlebar
+- Windows/macOS: re-apply the bundled etc/gtk-3.0/settings.ini at application priority, as GDK otherwise
+  forces the system font (and on Windows ClearType-style hinting) over it
+- macOS: find the data folders inside CherryTree.app (Contents/Resources/share/cherrytree, share/locale)
+- Windows: keep WS_MINIMIZEBOX|WS_SYSMENU on the CSD main window so the taskbar button minimises it (#1917)
 
 Set CHERRYTREE_NATIVE_LOOK=1 to disable the environment defaults.
 ---
 diff --git a/src/ct/ct_app.cc b/src/ct/ct_app.cc
-index 48c45af..dfbcd16 100644
+index 48c45af..4ca2ccf 100644
 --- a/src/ct/ct_app.cc
 +++ b/src/ct/ct_app.cc
-@@ -68,11 +68,63 @@ static void kill_callback_handler(int signum)
+@@ -68,11 +68,70 @@ static void kill_callback_handler(int signum)
  }
  
  // small optimization: second instance doesn't need all UI initialization, so we call it on the real startup
-+#if defined(_WIN32)
-+// Kali look: GDK on Windows reports the Windows values for gtk-font-name (Segoe UI 9),
-+// gtk-xft-hintstyle/rgba/antialias and gtk-overlay-scrolling, and those take priority over
-+// <prefix>/etc/gtk-3.0/settings.ini. Re-apply that file at application priority so the Kali
-+// fonts and font rendering are used (skipped with CHERRYTREE_NATIVE_LOOK=1).
-+static void _win32_apply_gtk_settings_ini()
++#if defined(_WIN32) || defined(__APPLE__)
++// Bundled look: GDK on Windows and macOS reports the system values for gtk-font-name (Segoe UI 9,
++// the macOS system font) and, on Windows, for gtk-xft-hintstyle/rgba/antialias and
++// gtk-overlay-scrolling. Those take priority over the bundled etc/gtk-3.0/settings.ini, so re-apply
++// that file at application priority to use the bundled fonts and font rendering
++// (skipped with CHERRYTREE_NATIVE_LOOK=1).
++static void _apply_bundled_gtk_settings_ini()
 +{
 +    if (g_getenv("CHERRYTREE_NATIVE_LOOK")) {
 +        return;
 +    }
++#if defined(_WIN32)
++    // e.g. cherrytree_1.7.2_win64_portable\ucrt64
 +    gchar* pTopDir = g_win32_get_package_installation_directory_of_module(NULL);
++#else // __APPLE__
++    // e.g. CherryTree.app/Contents/Resources (the datadir is Contents/Resources/share/cherrytree)
++    gchar* pTopDir = g_strdup(fs::get_cherrytree_datadir().parent_path().parent_path().string().c_str());
++#endif // __APPLE__
 +    if (not pTopDir) {
 +        return;
 +    }
@@ -64,32 +73,32 @@ index 48c45af..dfbcd16 100644
 +    g_key_file_unref(pKeyFile);
 +    g_free(pIniPath);
 +}
-+#endif // _WIN32
++#endif // _WIN32 || __APPLE__
 +
  void CtApp::_on_startup()
  {
      if (_initDone) return;
      _initDone = true;
  
-+#if defined(_WIN32)
-+    _win32_apply_gtk_settings_ini();
-+#endif // _WIN32
++#if defined(_WIN32) || defined(__APPLE__)
++    _apply_bundled_gtk_settings_ini();
++#endif // _WIN32 || __APPLE__
 +
  #if defined(_WIN32)
      (void)fs::alter_TEXMFROOT_env_var();
      (void)fs::alter_PATH_env_var();
 diff --git a/src/ct/ct_config.cc b/src/ct/ct_config.cc
-index 44a7ab1..ed03612 100644
+index 44a7ab1..94d1a9f 100644
 --- a/src/ct/ct_config.cc
 +++ b/src/ct/ct_config.cc
 @@ -86,6 +86,17 @@ bool CtConfig::_load_from_file()
          }
      }
  #endif // _WIN32
-+    // Kali look: on first run of the core instance (the import instance has no tmp filepath)
-+    // start from the bundled Kali defaults, i.e. what kali-themes ships in /etc/skel
++    // bundled look: on first run of the core instance (the import instance has no tmp filepath)
++    // start from the bundled default settings
 +    if (not _configFilepathTmp.string().empty() and not fs::exists(_configFilepath)) {
-+        const fs::path seedFilepath = fs::get_cherrytree_datadir() / "data" / "config-kali.cfg";
++        const fs::path seedFilepath = fs::get_cherrytree_datadir() / "data" / "config-default.cfg";
 +        if (fs::is_regular_file(seedFilepath)) {
 +            (void)g_mkdir_with_parents(_configFilepath.parent_path().c_str(), 0755);
 +            if (fs::copy_file(seedFilepath, _configFilepath)) {
@@ -101,40 +110,58 @@ index 44a7ab1..ed03612 100644
          _uKeyFile = std::make_unique<Glib::KeyFile>();
          try {
 diff --git a/src/ct/ct_filesystem.cc b/src/ct/ct_filesystem.cc
-index b95567e..54cadb4 100644
+index b95567e..2b6b898 100644
 --- a/src/ct/ct_filesystem.cc
 +++ b/src/ct/ct_filesystem.cc
-@@ -447,7 +447,13 @@ fs::path get_cherrytree_configdir()
+@@ -154,6 +154,14 @@ void register_exe_path_detect_if_portable(const char* exe_path)
+         // exePath: /tmp/.mount_CherryaUjoTO/usr/bin/cherrytree
+         _AppImageUsrDir = _exePath.parent_path().parent_path();
+     }
++#if defined(__APPLE__)
++    // macOS application bundle: CherryTree.app/Contents/MacOS/cherrytree
++    //                           CherryTree.app/Contents/Resources/share/cherrytree, .../share/locale
++    const fs::path bundleResourcesDir = _exePath.parent_path().parent_path() / "Resources";
++    if (is_directory(bundleResourcesDir / "share" / "cherrytree")) {
++        _AppImageUsrDir = bundleResourcesDir;
++    }
++#endif // __APPLE__
+ #endif // !_WIN32
+     const fs::path portableConfigFile = portableConfigDir / CtConfig::ConfigFilename;
+     if (is_regular_file(portableConfigFile)) {
+@@ -447,6 +455,18 @@ fs::path get_cherrytree_configdir()
      if (not _portableConfigDir.empty()) {
          return _portableConfigDir;
      }
-+#if defined(_WIN32) || defined(__APPLE__)
-+    // Kali look build: its own settings folder, so a config.cfg / icons folder left by a regular
-+    // CherryTree install can't override the Kali defaults (and the two can be used side by side)
-+    return Glib::build_filename(Glib::get_user_config_dir(), std::string{CtConst::APP_NAME} + "-kali");
-+#else
-     return Glib::build_filename(Glib::get_user_config_dir(), CtConst::APP_NAME);
++    // this build keeps its own settings folder, so a config.cfg / icons folder left by a regular
++    // CherryTree install can't override the bundled look (and the two can be used side by side)
++#if defined(_WIN32)
++    // %APPDATA%\CherryTree (a regular install uses %LOCALAPPDATA%\cherrytree)
++    const gchar* pAppData = g_getenv("APPDATA");
++    if (pAppData and *pAppData) {
++        return Glib::build_filename(pAppData, "CherryTree");
++    }
++#elif defined(__APPLE__)
++    // ~/Library/Application Support/CherryTree (a Homebrew install uses ~/.config/cherrytree)
++    return Glib::build_filename(Glib::get_home_dir(), "Library", "Application Support", "CherryTree");
 +#endif
+     return Glib::build_filename(Glib::get_user_config_dir(), CtConst::APP_NAME);
  }
  
- std::optional<fs::path> get_cherrytree_logdir()
 diff --git a/src/ct/ct_main.cc b/src/ct/ct_main.cc
-index e4ca520..597e080 100644
+index e4ca520..130e7de 100644
 --- a/src/ct/ct_main.cc
 +++ b/src/ct/ct_main.cc
-@@ -55,6 +55,18 @@ void glib_log_handler(const gchar*/*log_domain*/, GLogLevelFlags log_level, cons
+@@ -55,6 +55,16 @@ void glib_log_handler(const gchar*/*log_domain*/, GLogLevelFlags log_level, cons
  
  int main(int argc, char *argv[])
  {
 +#if defined(_WIN32) || defined(__APPLE__)
-+    // Kali look: render text with fontconfig/FreeType (as on Kali Linux) instead of the native
-+    // font backend, and let the GTK theme (Kali-Dark) draw every window decoration.
++    // bundled look: render text with fontconfig/FreeType (as on Linux) instead of the native
++    // font backend, and let the bundled GTK theme draw every window decoration.
 +    // Values already present in the environment win; CHERRYTREE_NATIVE_LOOK=1 disables both.
 +    if (not g_getenv("CHERRYTREE_NATIVE_LOOK")) {
 +        g_setenv("PANGOCAIRO_BACKEND", "fc", FALSE/*overwrite*/);
-+#if defined(_WIN32)
 +        g_setenv("GTK_CSD", "1", FALSE/*overwrite*/);
-+#endif /* _WIN32 */
 +    }
 +#endif /* _WIN32 || __APPLE__ */
 +
