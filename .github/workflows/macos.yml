@@ -13,7 +13,6 @@ env:
 
 jobs:
   build:
-    if: false   # temporary while diagnosing the start hang
     name: CherryTree ${{ matrix.version }} for macOS (Apple silicon)
     runs-on: macos-15
     strategy:
@@ -40,20 +39,3 @@ jobs:
 
 
 
-  # temporary: diagnose the start hang on the app from an earlier build
-  diag:
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v5
-      - env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh run download 42061033967 -n cherrytree-1.7.2-macos-arm64 -D art
-          hdiutil attach -nobrowse -mountpoint /tmp/dmg art/dist/*.dmg >/dev/null
-          cp -R /tmp/dmg/CherryTree.app /tmp/CherryTree.app; hdiutil detach /tmp/dmg >/dev/null
-          macos/tests/diag.sh /tmp/CherryTree.app diag
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: diag
-          path: diag/

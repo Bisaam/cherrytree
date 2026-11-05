@@ -23,7 +23,8 @@ EOF
 
 swiftc -O -o "${T}/windows" "${HERE}/windows.swift"
 START=$(date +%s)
-G_MESSAGES_DEBUG=all "${APP}/Contents/MacOS/CherryTree" "${T}/Demo Notes.ctd" > "${OUT}/cherrytree.log" 2>&1 &
+LAUNCHER="${APP}/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${APP}/Contents/Info.plist")"
+"${LAUNCHER}" "${T}/Demo Notes.ctd" > "${OUT}/cherrytree.log" 2>&1 &
 PID=$!
 WAITED=0
 while :; do

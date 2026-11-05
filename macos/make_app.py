@@ -5,8 +5,9 @@ Copies the binary, the bundled look (look/), the GTK data it needs and every Hom
 loads into the bundle, rewrites the library references to @loader_path-relative ones, signs it ad
 hoc and fails if anything still points outside the bundle (other than macOS itself).
 
-  CherryTree.app/Contents/MacOS/CherryTree     launcher (macos/launcher.c): environment, then exec
-  CherryTree.app/Contents/MacOS/cherrytree     CherryTree
+  CherryTree.app/Contents/MacOS/CherryTree-launcher   launcher (macos/launcher.c): environment, then exec
+  CherryTree.app/Contents/MacOS/CherryTree            CherryTree
+  (the two names must differ by more than case: macOS file systems are usually case-insensitive)
   CherryTree.app/Contents/Resources/lib/       libraries + gdk-pixbuf loaders + GTK modules
   CherryTree.app/Contents/Resources/share/     cherrytree data, locale, themes, icons, schemas, fonts
   CherryTree.app/Contents/Resources/etc/       gtk-3.0/settings.ini, fonts/ (fontconfig)
@@ -212,10 +213,13 @@ def main():
     b = Bundler(res)
 
     print("binary + launcher")
-    copyfile(a.install / "bin" / "cherrytree", macos_dir / "cherrytree")
-    b.add_macho(macos_dir / "cherrytree", a.install / "bin" / "cherrytree")
+    binary, launcher = macos_dir / "CherryTree", macos_dir / "CherryTree-launcher"
+    copyfile(a.install / "bin" / "cherrytree", binary)
+    b.add_macho(binary, a.install / "bin" / "cherrytree")
     run("clang", "-O2", "-Wall", "-mmacosx-version-min=11.0", "-framework", "CoreFoundation",
-        "-o", macos_dir / "CherryTree", mac / "launcher.c")
+        "-o", launcher, mac / "launcher.c")
+    if os.path.samefile(binary, launcher) or binary.stat().st_size == launcher.stat().st_size:
+        sys.exit("error: the launcher overwrote the CherryTree binary")
 
     print("cherrytree data, translations")
     copytree(a.install / "share" / "cherrytree", share / "cherrytree")
@@ -296,7 +300,7 @@ def main():
     ]
     info = {
         "CFBundleDevelopmentRegion": "en",
-        "CFBundleExecutable": "CherryTree",
+        "CFBundleExecutable": "CherryTree-launcher",
         "CFBundleIdentifier": BUNDLE_ID,
         "CFBundleName": "CherryTree",
         "CFBundleDisplayName": "CherryTree",

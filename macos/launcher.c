@@ -1,5 +1,6 @@
-// CherryTree.app/Contents/MacOS/CherryTree: points GTK, GLib, fontconfig and gdk-pixbuf at the
-// files inside the bundle, then runs CherryTree (Contents/MacOS/cherrytree) in this same process.
+// CherryTree.app/Contents/MacOS/CherryTree-launcher (the bundle's CFBundleExecutable): points GTK,
+// GLib, fontconfig and gdk-pixbuf at the files inside the bundle, then runs CherryTree
+// (Contents/MacOS/CherryTree) in this same process.
 #include <CoreFoundation/CoreFoundation.h>
 #include <limits.h>
 #include <mach-o/dyld.h>
@@ -65,7 +66,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "CherryTree: can't find its own location\n");
         return 1;
     }
-    // real = .../CherryTree.app/Contents/MacOS/CherryTree
+    // real = .../CherryTree.app/Contents/MacOS/CherryTree-launcher
     char contents[PATH_MAX];
     snprintf(contents, sizeof contents, "%s", real);
     *strrchr(contents, '/') = 0;  // .../Contents/MacOS
@@ -109,7 +110,7 @@ int main(int argc, char* argv[])
     }
 
     char bin[PATH_MAX];
-    snprintf(bin, sizeof bin, "%s/MacOS/cherrytree", contents);
+    snprintf(bin, sizeof bin, "%s/MacOS/CherryTree", contents);
     char** args = calloc((size_t)argc + 1, sizeof(char*));
     int n = 0;
     args[n++] = bin;  // CherryTree finds its data from its own path (Contents/Resources/share/cherrytree)
@@ -118,6 +119,6 @@ int main(int argc, char* argv[])
     }
     args[n] = NULL;
     execv(bin, args);
-    perror("CherryTree: can't start Contents/MacOS/cherrytree");
+    perror("CherryTree: can't start Contents/MacOS/CherryTree");
     return 127;
 }
