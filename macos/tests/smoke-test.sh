@@ -21,17 +21,31 @@ cfg += "\n[tree]\nrest_exp_coll=1\n[misc]\nwin_title_doc_dir=false\n"
 open(dst, "w").write(cfg)
 EOF
 
-"${APP}/Contents/MacOS/CherryTree" "${T}/Demo Notes.ctd" > "${OUT}/cherrytree.log" 2>&1 &
+swiftc -O -o "${T}/windows" "${HERE}/windows.swift"
+START=$(date +%s)
+G_MESSAGES_DEBUG=all "${APP}/Contents/MacOS/CherryTree" "${T}/Demo Notes.ctd" > "${OUT}/cherrytree.log" 2>&1 &
 PID=$!
-sleep 30
-if ! kill -0 "${PID}" 2>/dev/null; then
-  echo "CherryTree exited early:"; cat "${OUT}/cherrytree.log"; exit 1
-fi
-echo "--- on-screen windows"; swift "${HERE}/windows.swift" | tee "${OUT}/windows.txt" || true
-if ! grep -q "pid=${PID} " "${OUT}/windows.txt"; then echo "warning: no on-screen window of CherryTree (pid ${PID})"; fi
+WAITED=0
+while :; do
+  sleep 5
+  kill -0 "${PID}" 2>/dev/null || { echo "CherryTree exited early:"; cat "${OUT}/cherrytree.log"; exit 1; }
+  "${T}/windows" > "${OUT}/windows.txt" || true
+  WAITED=$(( $(date +%s) - START ))
+  if grep -q "pid=${PID} " "${OUT}/windows.txt"; then echo "window after ${WAITED} s"; break; fi
+  if [ "${WAITED}" -ge 240 ]; then
+    echo "no window after ${WAITED} s; where it is:"
+    sample "${PID}" 5 -file "${OUT}/sample.txt" >/dev/null 2>&1 || true
+    head -120 "${OUT}/sample.txt" || true
+    break
+  fi
+done
+du -sh "${HOME}/.cache/fontconfig" 2>/dev/null || true
+sleep 10  # let it draw
+cat "${OUT}/windows.txt"
 screencapture -x "${OUT}/screenshot.png" || echo "screencapture failed"
 cp "${CFG_DIR}/config.cfg" "${OUT}/config-after-start.cfg" 2>/dev/null || true
 kill "${PID}"; wait "${PID}" 2>/dev/null || true
 rm -rf "${CFG_DIR}" "${T}"
 echo "--- log"; cat "${OUT}/cherrytree.log"
-echo "ok: CherryTree ran for 30 s; screenshot in ${OUT}"
+grep -q "pid=${PID} " "${OUT}/windows.txt" || { echo "error: CherryTree never showed a window"; exit 1; }
+echo "ok: CherryTree window after ${WAITED} s; screenshot in ${OUT}"
