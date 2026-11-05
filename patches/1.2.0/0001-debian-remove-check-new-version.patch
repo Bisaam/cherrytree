@@ -1,0 +1,25 @@
+Description: Fixes #871452.
+Author: Andrius Merkys <merkys@debian.org>
+Forwarded: not-needed
+--- a/src/ct/ct_menu_actions.cc
++++ b/src/ct/ct_menu_actions.cc
+@@ -491,8 +491,6 @@
+     }
+     {
+         const char* help_cat = _("Help");
+-        _actions.push_back(CtMenuAction{help_cat, "ct_check_newer", "ct_network", _("_Check Newer Version"), None,
+-            _("Check for a Newer Version Available Online"), sigc::mem_fun(*pActions, &CtActions::check_for_newer_version)});
+         _actions.push_back(CtMenuAction{help_cat, "ct_homepage", "ct_globe", _("_Website"), None,
+             _("Visit CherryTree's Website"), sigc::mem_fun(*pActions, &CtActions::online_home)});
+         _actions.push_back(CtMenuAction{help_cat, "ct_github", "ct_github", _("_Source Code"), None,
+--- a/src/ct/ct_menu_ui.cc
++++ b/src/ct/ct_menu_ui.cc
+@@ -379,8 +379,6 @@
+   </menu>
+ 
+   <menu action='HelpMenu'>
+-    <menuitem action='ct_check_newer'/>
+-    <separator/>
+     <menuitem action='ct_homepage'/>
+     <menuitem action='ct_github'/>
+     <menuitem action='ct_issues'/>

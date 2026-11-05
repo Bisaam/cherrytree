@@ -1,0 +1,232 @@
+Subject: Kali look defaults for the Windows (and macOS) builds
+
+- Windows/macOS: settings in <user config dir>/cherrytree-kali, seeded on first run from
+  <datadir>/data/config-kali.cfg (the kali-themes /etc/skel defaults)
+- Windows/macOS: default to fontconfig+FreeType text rendering (PANGOCAIRO_BACKEND=fc) like on Kali
+- Windows: default to client side decorations (GTK_CSD=1) so the Kali-Dark theme draws every titlebar
+- Windows: re-apply <prefix>/etc/gtk-3.0/settings.ini at application priority, as GDK otherwise
+  forces the Windows font (Segoe UI 9) and ClearType-style hinting over it
+- Windows: keep WS_MINIMIZEBOX|WS_SYSMENU on the CSD main window so the taskbar button minimises it
+
+Set CHERRYTREE_NATIVE_LOOK=1 to disable the environment defaults.
+---
+diff --git a/src/ct/ct_app.cc b/src/ct/ct_app.cc
+index 48c45af..dfbcd16 100644
+--- a/src/ct/ct_app.cc
++++ b/src/ct/ct_app.cc
+@@ -68,11 +68,63 @@ static void kill_callback_handler(int signum)
+ }
+ 
+ // small optimization: second instance doesn't need all UI initialization, so we call it on the real startup
++#if defined(_WIN32)
++// Kali look: GDK on Windows reports the Windows values for gtk-font-name (Segoe UI 9),
++// gtk-xft-hintstyle/rgba/antialias and gtk-overlay-scrolling, and those take priority over
++// <prefix>/etc/gtk-3.0/settings.ini. Re-apply that file at application priority so the Kali
++// fonts and font rendering are used (skipped with CHERRYTREE_NATIVE_LOOK=1).
++static void _win32_apply_gtk_settings_ini()
++{
++    if (g_getenv("CHERRYTREE_NATIVE_LOOK")) {
++        return;
++    }
++    gchar* pTopDir = g_win32_get_package_installation_directory_of_module(NULL);
++    if (not pTopDir) {
++        return;
++    }
++    gchar* pIniPath = g_build_filename(pTopDir, "etc", "gtk-3.0", "settings.ini", NULL);
++    g_free(pTopDir);
++    GKeyFile* pKeyFile = g_key_file_new();
++    if (g_key_file_load_from_file(pKeyFile, pIniPath, G_KEY_FILE_NONE, NULL)) {
++        GtkSettings* pSettings = gtk_settings_get_default();
++        gsize numKeys{0};
++        gchar** ppKeys = g_key_file_get_keys(pKeyFile, "Settings", &numKeys, NULL);
++        for (gsize i = 0; ppKeys and i < numKeys; ++i) {
++            GParamSpec* pSpec = g_object_class_find_property(G_OBJECT_GET_CLASS(pSettings), ppKeys[i]);
++            if (not pSpec or (pSpec->flags & G_PARAM_DEPRECATED)) {
++                continue;
++            }
++            const GType valueType = G_PARAM_SPEC_VALUE_TYPE(pSpec);
++            if (G_TYPE_STRING == valueType) {
++                gchar* pValue = g_key_file_get_string(pKeyFile, "Settings", ppKeys[i], NULL);
++                if (pValue) {
++                    g_object_set(pSettings, ppKeys[i], pValue, NULL);
++                    g_free(pValue);
++                }
++            }
++            else if (G_TYPE_INT == valueType) {
++                g_object_set(pSettings, ppKeys[i], g_key_file_get_integer(pKeyFile, "Settings", ppKeys[i], NULL), NULL);
++            }
++            else if (G_TYPE_BOOLEAN == valueType) {
++                g_object_set(pSettings, ppKeys[i], g_key_file_get_boolean(pKeyFile, "Settings", ppKeys[i], NULL), NULL);
++            }
++        }
++        g_strfreev(ppKeys);
++    }
++    g_key_file_unref(pKeyFile);
++    g_free(pIniPath);
++}
++#endif // _WIN32
++
+ void CtApp::_on_startup()
+ {
+     if (_initDone) return;
+     _initDone = true;
+ 
++#if defined(_WIN32)
++    _win32_apply_gtk_settings_ini();
++#endif // _WIN32
++
+ #if defined(_WIN32)
+     (void)fs::alter_TEXMFROOT_env_var();
+     (void)fs::alter_PATH_env_var();
+diff --git a/src/ct/ct_config.cc b/src/ct/ct_config.cc
+index 44a7ab1..ed03612 100644
+--- a/src/ct/ct_config.cc
++++ b/src/ct/ct_config.cc
+@@ -86,6 +86,17 @@ bool CtConfig::_load_from_file()
+         }
+     }
+ #endif // _WIN32
++    // Kali look: on first run of the core instance (the import instance has no tmp filepath)
++    // start from the bundled Kali defaults, i.e. what kali-themes ships in /etc/skel
++    if (not _configFilepathTmp.string().empty() and not fs::exists(_configFilepath)) {
++        const fs::path seedFilepath = fs::get_cherrytree_datadir() / "data" / "config-kali.cfg";
++        if (fs::is_regular_file(seedFilepath)) {
++            (void)g_mkdir_with_parents(_configFilepath.parent_path().c_str(), 0755);
++            if (fs::copy_file(seedFilepath, _configFilepath)) {
++                spdlog::info("{} seeded from {}", _configFilepath.string(), seedFilepath.string());
++            }
++        }
++    }
+     if (fs::exists(_configFilepath)) {
+         _uKeyFile = std::make_unique<Glib::KeyFile>();
+         try {
+diff --git a/src/ct/ct_filesystem.cc b/src/ct/ct_filesystem.cc
+index b95567e..54cadb4 100644
+--- a/src/ct/ct_filesystem.cc
++++ b/src/ct/ct_filesystem.cc
+@@ -447,7 +447,13 @@ fs::path get_cherrytree_configdir()
+     if (not _portableConfigDir.empty()) {
+         return _portableConfigDir;
+     }
++#if defined(_WIN32) || defined(__APPLE__)
++    // Kali look build: its own settings folder, so a config.cfg / icons folder left by a regular
++    // CherryTree install can't override the Kali defaults (and the two can be used side by side)
++    return Glib::build_filename(Glib::get_user_config_dir(), std::string{CtConst::APP_NAME} + "-kali");
++#else
+     return Glib::build_filename(Glib::get_user_config_dir(), CtConst::APP_NAME);
++#endif
+ }
+ 
+ std::optional<fs::path> get_cherrytree_logdir()
+diff --git a/src/ct/ct_main.cc b/src/ct/ct_main.cc
+index e4ca520..597e080 100644
+--- a/src/ct/ct_main.cc
++++ b/src/ct/ct_main.cc
+@@ -55,6 +55,18 @@ void glib_log_handler(const gchar*/*log_domain*/, GLogLevelFlags log_level, cons
+ 
+ int main(int argc, char *argv[])
+ {
++#if defined(_WIN32) || defined(__APPLE__)
++    // Kali look: render text with fontconfig/FreeType (as on Kali Linux) instead of the native
++    // font backend, and let the GTK theme (Kali-Dark) draw every window decoration.
++    // Values already present in the environment win; CHERRYTREE_NATIVE_LOOK=1 disables both.
++    if (not g_getenv("CHERRYTREE_NATIVE_LOOK")) {
++        g_setenv("PANGOCAIRO_BACKEND", "fc", FALSE/*overwrite*/);
++#if defined(_WIN32)
++        g_setenv("GTK_CSD", "1", FALSE/*overwrite*/);
++#endif /* _WIN32 */
++    }
++#endif /* _WIN32 || __APPLE__ */
++
+ #if !defined(_WIN32) && !defined(__APPLE__)
+     try {
+         std::locale::global(std::locale("")); // Set the global C++ locale to the user-specified locale
+diff --git a/src/ct/ct_main_win.cc b/src/ct/ct_main_win.cc
+index 875fab8..53e9623 100644
+--- a/src/ct/ct_main_win.cc
++++ b/src/ct/ct_main_win.cc
+@@ -25,6 +25,7 @@
+ #include "ct_actions.h"
+ #include "ct_storage_control.h"
+ #include "ct_clipboard.h"
++#include "ct_misc_utils.h"
+ 
+ void CtStatusBar::new_cursor_pos(const int r, const int c)
+ {
+@@ -152,6 +153,9 @@ CtMainWin::CtMainWin(bool                            no_gui,
+         if (rGdkWin) {
+             rGdkWin->set_events(rGdkWin->get_events() | Gdk::STRUCTURE_MASK);
+             //spdlog::debug("OK events + STRUCTURE_MASK");
++#if defined(_WIN32)
++            CtMiscUtil::win32_csd_keep_taskbar_minimise(rGdkWin->gobj());
++#endif /* _WIN32 */
+         }
+         else {
+             spdlog::warn("!! unexp not get_window()");
+diff --git a/src/ct/ct_misc_utils.cc b/src/ct/ct_misc_utils.cc
+index c2d523a..98b4a8c 100644
+--- a/src/ct/ct_misc_utils.cc
++++ b/src/ct/ct_misc_utils.cc
+@@ -46,6 +46,7 @@
+ #ifdef _WIN32
+ #include <windows.h>
+ #include <shellapi.h>
++#include <gdk/gdkwin32.h>
+ #define WEXITSTATUS(x) x
+ #else // !_WIN32
+ #include <sys/wait.h> // WEXITSTATUS __FreeBSD__ (#1550)
+@@ -115,6 +116,38 @@ std::string CtCSV::table_to_csv(const CtStringTable& table)
+     return ret_str;
+ }
+ 
++#if defined(_WIN32)
++// With client side decorations (headerbar / menubar in titlebar) GDK clears every WM style bit,
++// so clicking the taskbar button can no longer minimise the window. Keep the two bits that the
++// shell needs; without WS_CAPTION they draw nothing.
++static GdkFilterReturn _win32_csd_style_filter(GdkXEvent* pXEvent, GdkEvent*/*pEvent*/, gpointer/*data*/)
++{
++    MSG* pMsg = static_cast<MSG*>(pXEvent);
++    if (WM_STYLECHANGING == pMsg->message and GWL_STYLE == static_cast<int>(pMsg->wParam)) {
++        auto pStyle = reinterpret_cast<STYLESTRUCT*>(pMsg->lParam);
++        if (0 == (pStyle->styleNew & WS_CAPTION)) {
++            pStyle->styleNew |= (WS_MINIMIZEBOX | WS_SYSMENU);
++        }
++    }
++    return GDK_FILTER_CONTINUE;
++}
++
++void CtMiscUtil::win32_csd_keep_taskbar_minimise(GdkWindow* pGdkWindow)
++{
++    static const char* filterKey{"ct-win32-csd-style-filter"};
++    if (not pGdkWindow or g_object_get_data(G_OBJECT(pGdkWindow), filterKey)) {
++        return;
++    }
++    g_object_set_data(G_OBJECT(pGdkWindow), filterKey, GINT_TO_POINTER(1));
++    gdk_window_add_filter(pGdkWindow, _win32_csd_style_filter, nullptr);
++    HWND hWnd = static_cast<HWND>(gdk_win32_window_get_handle(pGdkWindow));
++    const LONG style = GetWindowLong(hWnd, GWL_STYLE);
++    if (0 == (style & WS_CAPTION)) {
++        SetWindowLong(hWnd, GWL_STYLE, style | WS_MINIMIZEBOX | WS_SYSMENU);
++    }
++}
++#endif // _WIN32
++
+ std::string CtMiscUtil::get_ct_language()
+ {
+     std::string retLang{CtConst::LANG_DEFAULT};
+diff --git a/src/ct/ct_misc_utils.h b/src/ct/ct_misc_utils.h
+index 86f2e85..3710986 100644
+--- a/src/ct/ct_misc_utils.h
++++ b/src/ct/ct_misc_utils.h
+@@ -48,6 +48,11 @@ bool system_cmd(const char* shell_cmd, const char* cwd);
+ 
+ std::string get_ct_language();
+ 
++#if defined(_WIN32)
++// client side decorated main window: keep the taskbar button able to minimise it
++void win32_csd_keep_taskbar_minimise(GdkWindow* pGdkWindow);
++#endif // _WIN32
++
+ std::string get_doc_extension(const CtDocType ctDocType, const CtDocEncrypt ctDocEncrypt);
+ 
+ void filepath_extension_fix(const CtDocType ctDocType, const CtDocEncrypt ctDocEncrypt, std::string& filepath);

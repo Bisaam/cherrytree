@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cherrytree><node name="Welcome" unique_id="1" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"><rich_text>Welcome! This is a demo notebook.
+
+The tree on the left holds your notes; each node can have children.
+</rich_text></node><node name="Linux" unique_id="7" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"><node name="Shell basics" unique_id="2" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"><rich_text>
+</rich_text><rich_text underline="single">Navigation:</rich_text><rich_text>
+
+1. pwd: print the working directory
+2. ls -la: list files, including hidden ones
+3. cd ~: go to the home folder
+
+
+</rich_text><rich_text underline="single">Files:</rich_text><rich_text>
+• cp, mv, rm: copy, move, remove
+• find . -name "*.md": search by name
+• grep -rn "TODO" .: search inside files
+• tar -xzf archive.tar.gz: extract an archive
+
+
+</rich_text><rich_text underline="single">Tips:</rich_text><rich_text>
+• Press Tab to complete file and command names.
+• Ctrl+R searches the command history.
+• Every command has a manual: </rich_text><rich_text style="italic">man</rich_text><rich_text> &lt;command&gt;.
+• Chain commands with &amp;&amp; so the next one only runs if the previous one worked.
+• </rich_text><rich_text weight="heavy">Permissions</rich_text><rich_text>: chmod +x script.sh makes a script executable.
+
+
+</rich_text><rich_text underline="single">Links:</rich_text><rich_text>
+• </rich_text><rich_text link="webs https://www.giuspen.net/cherrytree/">CherryTree website</rich_text><rich_text>
+
+</rich_text><rich_text weight="heavy">inline code: </rich_text><rich_text family="monospace">ls -la | grep .conf</rich_text><rich_text>
+</rich_text></node><node name="Networking" unique_id="5" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"><node name="Ports and services" unique_id="3" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"></node><node name="SSH keys" unique_id="4" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"></node></node><node name="Package management" unique_id="6" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"></node></node><node name="Python" unique_id="10" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"><node name="Snippets" unique_id="8" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"></node><node name="Virtual environments" unique_id="9" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"></node></node><node name="Projects" unique_id="13" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"><node name="Home lab" unique_id="11" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"></node><node name="Website" unique_id="12" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"></node></node><node name="Reading list" unique_id="14" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"></node><node name="Recipes" unique_id="15" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"></node><node name="Ideas" unique_id="16" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"></node><node name="To do" unique_id="17" prog_lang="custom-colors" tags="" readonly="0" nosearch_me="0" nosearch_ch="0" custom_icon_id="0" is_bold="0" foreground="" ts_creation="1793817878" ts_lastsave="1793817878"></node></cherrytree>
