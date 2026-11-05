@@ -13,6 +13,7 @@ env:
 
 jobs:
   build:
+    if: false   # temporary while diagnosing the start hang
     name: CherryTree ${{ matrix.version }} for macOS (Apple silicon)
     runs-on: macos-15
     strategy:
@@ -38,21 +39,21 @@ jobs:
           if-no-files-found: warn
 
 
-  # temporary control: does Homebrew's own cherrytree show a window on this runner?
-  control-homebrew:
+
+  # temporary: diagnose the start hang on the app from an earlier build
+  diag:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
-      - run: |
-          brew install --quiet cherrytree
-          swiftc -O -o /tmp/windows macos/tests/windows.swift
-          cherrytree > /tmp/ct.log 2>&1 &
-          PID=$!
-          for i in $(seq 1 24); do sleep 5; /tmp/windows > /tmp/w.txt; if grep -q "pid=${PID} " /tmp/w.txt; then echo "window after $((i*5)) s"; break; fi; done
-          cat /tmp/w.txt; ps -o pid,stat,etime,command -p $PID || true
-          grep -q "pid=${PID} " /tmp/w.txt || { sudo sample $PID 3 -file /tmp/s.txt; sudo cat /tmp/s.txt | head -150; }
-          mkdir -p shot; screencapture -x shot/homebrew-cherrytree.png; kill $PID || true; echo "--- log"; cat /tmp/ct.log
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 42061033967 -n cherrytree-1.7.2-macos-arm64 -D art
+          hdiutil attach -nobrowse -mountpoint /tmp/dmg art/dist/*.dmg >/dev/null
+          cp -R /tmp/dmg/CherryTree.app /tmp/CherryTree.app; hdiutil detach /tmp/dmg >/dev/null
+          macos/tests/diag.sh /tmp/CherryTree.app diag
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
-          name: control-homebrew
-          path: shot/
+          name: diag
+          path: diag/
