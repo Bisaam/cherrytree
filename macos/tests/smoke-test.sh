@@ -27,6 +27,8 @@ sleep 30
 if ! kill -0 "${PID}" 2>/dev/null; then
   echo "CherryTree exited early:"; cat "${OUT}/cherrytree.log"; exit 1
 fi
+echo "--- on-screen windows"; swift "${HERE}/windows.swift" | tee "${OUT}/windows.txt" || true
+if ! grep -q "pid=${PID} " "${OUT}/windows.txt"; then echo "warning: no on-screen window of CherryTree (pid ${PID})"; fi
 screencapture -x "${OUT}/screenshot.png" || echo "screencapture failed"
 cp "${CFG_DIR}/config.cfg" "${OUT}/config-after-start.cfg" 2>/dev/null || true
 kill "${PID}"; wait "${PID}" 2>/dev/null || true

@@ -36,3 +36,16 @@ jobs:
             dist/*.dmg
             smoke/
           if-no-files-found: warn
+
+  # temporary: how the runner's GUI session and screen-capture permission are set up
+  diag:
+    runs-on: macos-15
+    steps:
+      - run: |
+          csrutil status || true
+          sw_vers; who; id
+          echo "--- process ancestry"; p=$$; while [ "$p" -gt 1 ]; do ps -o pid=,ppid=,comm= -p "$p"; p=$(ps -o ppid= -p "$p" | tr -d ' '); done
+          for db in "/Library/Application Support/com.apple.TCC/TCC.db" "$HOME/Library/Application Support/com.apple.TCC/TCC.db"; do
+            echo "--- $db"; sudo sqlite3 "$db" "select service, client, auth_value from access where service like '%Screen%' or service like '%Accessib%' or service like '%PostEvent%';" || true
+            sudo sqlite3 "$db" "pragma table_info(access);" | cut -d'|' -f2 | tr '\n' ' '; echo
+          done
