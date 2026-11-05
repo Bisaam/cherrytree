@@ -34,8 +34,10 @@ while :; do
   if grep -q "pid=${PID} " "${OUT}/windows.txt"; then echo "window after ${WAITED} s"; break; fi
   if [ "${WAITED}" -ge 240 ]; then
     echo "no window after ${WAITED} s; where it is:"
-    sample "${PID}" 5 -file "${OUT}/sample.txt" >/dev/null 2>&1 || true
-    head -120 "${OUT}/sample.txt" || true
+    ps -o pid,ppid,stat,etime,command -p "${PID}" || true
+    sudo sample "${PID}" 3 -file "${OUT}/sample.txt" || true
+    sudo chmod a+r "${OUT}/sample.txt" 2>/dev/null || true
+    grep -v "^ *[+!:|]* *[0-9]* *???" "${OUT}/sample.txt" | head -200 || true
     break
   fi
 done

@@ -37,3 +37,22 @@ jobs:
             smoke/
           if-no-files-found: warn
 
+
+  # temporary control: does Homebrew's own cherrytree show a window on this runner?
+  control-homebrew:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          brew install --quiet cherrytree
+          swiftc -O -o /tmp/windows macos/tests/windows.swift
+          cherrytree > /tmp/ct.log 2>&1 &
+          PID=$!
+          for i in $(seq 1 24); do sleep 5; /tmp/windows > /tmp/w.txt; if grep -q "pid=${PID} " /tmp/w.txt; then echo "window after $((i*5)) s"; break; fi; done
+          cat /tmp/w.txt; ps -o pid,stat,etime,command -p $PID || true
+          grep -q "pid=${PID} " /tmp/w.txt || { sudo sample $PID 3 -file /tmp/s.txt; sudo cat /tmp/s.txt | head -150; }
+          mkdir -p shot; screencapture -x shot/homebrew-cherrytree.png; kill $PID || true; echo "--- log"; cat /tmp/ct.log
+      - uses: actions/upload-artifact@v7
+        with:
+          name: control-homebrew
+          path: shot/
