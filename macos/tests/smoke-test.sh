@@ -3,11 +3,12 @@
 # checks it shows a window, takes screenshots, and quits it with the macOS Quit command (the Apple
 # Event that Dock > Quit, log out and shut down send) to check that it saves its settings:
 #   1. a 900x600 window: screenshot.png, then Quit: CherryTree must exit by itself and write config.cfg
-#   2. the same settings with the window zoomed (maximised): screenshot-zoomed.png, then Quit again
+#   2. zoom the window (double-click on the titlebar, as a user does): screenshot-zoomed.png, Quit,
+#      and config.cfg must say win_is_maximized=true
 #   macos/tests/smoke-test.sh <path/to/CherryTree.app> <output dir>
 # Refuses to run if ~/Library/Application Support/CherryTree already exists (real settings).
 # Sending the Quit command needs the Automation permission for osascript (GitHub Actions: granted
-# by the workflow; on a Mac, macOS asks once).
+# by the workflow; on a Mac, macOS asks once), clicking needs Accessibility (granted on the runners).
 set -euo pipefail
 APP="$(cd "$1" && pwd)"
 OUT="$(mkdir -p "$2" && cd "$2" && pwd)"
@@ -27,13 +28,14 @@ python3 - "${APP}/Contents/Resources/share/cherrytree/data/config-default.cfg" "
 import sys
 src, dst, doc = sys.argv[1:]
 state = (f"[state]\ndoc_0={doc}\nnodep_0=1:0\ncurs_0=0\nhpaned_pos=250\nwin_is_maximized=false\n"
-         "win_position_x=50\nwin_position_y=70\nwin_size_w=900\nwin_size_h=600\n")
+         "win_position_x=50\nwin_position_y=60\nwin_size_w=900\nwin_size_h=540\n")
 cfg = open(src).read().replace("[state]\n", state, 1)
 cfg += "\n[tree]\nrest_exp_coll=1\n[misc]\nwin_title_doc_dir=false\n"
 open(dst, "w").write(cfg)
 EOF
 SEED_SUM="$(shasum "${CFG}" | cut -d' ' -f1)"
 swiftc -O -o "${T}/windows" "${HERE}/windows.swift"
+swiftc -O -o "${T}/click" "${HERE}/click.swift"
 
 # start_app <log>: start CherryTree, wait for its window (up to 240 s)
 start_app() {
@@ -88,10 +90,19 @@ cp "${CFG}" "${OUT}/config-after-quit.cfg" 2>/dev/null || true
 echo "ok: settings saved on Quit ($(wc -c < "${CFG}" | tr -d ' ') bytes; $(grep -E '^win_(size|position)_' "${CFG}" | tr '\n' ' '))"
 
 echo "=== 2: zoomed window"
-sed -i '' 's/^win_is_maximized=false$/win_is_maximized=true/' "${CFG}"
 start_app cherrytree-zoomed.log
+# a point on the window title, in the titlebar: bounds include GTK's ~22 px shadow margin
+read -r BX BY BW < <(grep "pid=${PID} " "${OUT}/windows.txt" | head -1 | sed -E 's/.* bounds=([0-9-]+),([0-9-]+) ([0-9]+)x.*/\1 \2 \3/')
+TX=$(( BX + BW * 3 / 4 )); TY=$(( BY + 42 ))
+"${T}/click" "${TX}" "${TY}" 1; sleep 1   # activate
+"${T}/click" "${TX}" "${TY}" 2; sleep 4   # double-click: zoom
+"${T}/windows" | grep "pid=${PID} " || true
 screencapture -x "${OUT}/screenshot-zoomed.png" || echo "screencapture failed"
 quit_app
+cp "${CFG}" "${OUT}/config-after-zoomed-quit.cfg"
+grep -q '^win_is_maximized=true$' "${CFG}" \
+  || { echo "error: the double-click on the titlebar didn't zoom the window (win_is_maximized not saved)"; exit 1; }
+echo "ok: zoomed with a double-click on the titlebar, saved on Quit"
 
 echo "--- log"; cat "${OUT}/cherrytree.log" "${OUT}/cherrytree-zoomed.log"
 echo "ok: CherryTree started and quit cleanly twice; screenshots in ${OUT}"
