@@ -98,7 +98,15 @@ mkdir -p "${DMG_STAGE}"
 cp -R "${APP}" "${DMG_STAGE}/"
 ln -s /Applications "${DMG_STAGE}/Applications"
 cp "${ROOT}/macos/README-macos.txt" "${DMG_STAGE}/README.txt"
-hdiutil create -quiet -volname "CherryTree ${CT_VERSION}" -srcfolder "${DMG_STAGE}" -ov -format UDZO \
-  "${WORK}/${PKG_NAME}.dmg"
+# hdiutil sometimes fails with "Resource busy" on GitHub's runners: retry, and show why
+for attempt in 1 2 3; do
+  if hdiutil create -volname "CherryTree ${CT_VERSION}" -srcfolder "${DMG_STAGE}" -ov -format UDZO \
+       "${WORK}/${PKG_NAME}.dmg" > "${WORK}/hdiutil.log" 2>&1; then
+    break
+  fi
+  echo "hdiutil create failed (attempt ${attempt}):"; cat "${WORK}/hdiutil.log"
+  [ "${attempt}" -lt 3 ] || exit 1
+  sleep 15
+done
 mv -f "${WORK}/${PKG_NAME}.dmg" "${DIST}/${PKG_NAME}.dmg"
 ls -la "${DIST}/${PKG_NAME}.dmg"
