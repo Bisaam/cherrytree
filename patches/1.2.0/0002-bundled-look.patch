@@ -8,17 +8,131 @@ Subject: Bundled look and settings for the Windows and macOS builds
 - Windows/macOS: re-apply the bundled etc/gtk-3.0/settings.ini at application priority, as GDK otherwise
   forces the system font (and on Windows ClearType-style hinting) over it
 - macOS: find the data folders inside CherryTree.app (Contents/Resources/share/cherrytree, share/locale)
+- macOS: app menu About / Preferences (Cmd+,) / Quit (Cmd+Q) actions; Dock > Quit, log out and shut down
+  save the settings (and ask about unsaved changes) instead of ending the process; open files from Finder
 - Windows: keep WS_MINIMIZEBOX|WS_SYSMENU on the CSD main window so the taskbar button minimises it (#1917)
 
 Set CHERRYTREE_NATIVE_LOOK=1 to disable the environment defaults.
 ---
 diff --git a/src/ct/ct_app.cc b/src/ct/ct_app.cc
-index 48c45af..4ca2ccf 100644
+index 48c45af..598bb81 100644
 --- a/src/ct/ct_app.cc
 +++ b/src/ct/ct_app.cc
-@@ -68,11 +68,70 @@ static void kill_callback_handler(int signum)
+@@ -28,6 +28,38 @@
+ #include "config.h"
+ #include "ct_logging.h"
+ #include <iostream>
++#if defined(__APPLE__)
++#include <objc/runtime.h>
++#endif // __APPLE__
++
++#if defined(__APPLE__)
++// the CherryTree window that the macOS application menu acts on: the active one, else the first one
++static CtMainWin* _macos_main_win(Gtk::Application& app)
++{
++    if (CtMainWin* pCtMainWin = dynamic_cast<CtMainWin*>(app.get_active_window())) {
++        return pCtMainWin;
++    }
++    for (Gtk::Window* pWin : app.get_windows()) {
++        if (CtMainWin* pCtMainWin = dynamic_cast<CtMainWin*>(pWin)) {
++            return pCtMainWin;
++        }
++    }
++    return nullptr;
++}
++
++// macOS lets Cmd+Q and Dock > Quit through while a modal dialog runs (Preferences, a question...):
++// don't close the windows under it, show it instead
++static bool _macos_modal_dialog_open()
++{
++    for (Gtk::Window* pWin : Gtk::Window::list_toplevels()) {
++        if (pWin->get_modal() and pWin->get_visible()) {
++            pWin->present();
++            return true;
++        }
++    }
++    return false;
++}
++#endif // __APPLE__
+ 
+ CtApp::CtApp(const Glib::ustring application_id_postfix)
+  : Gtk::Application{Glib::ustring{"net.giuspen.cherrytree"} + application_id_postfix, Gio::APPLICATION_HANDLES_OPEN}
+@@ -41,6 +73,31 @@ CtApp::CtApp(const Glib::ustring application_id_postfix)
+         _new_window = true;
+     });
+ 
++#if defined(__APPLE__)
++    // macOS application menu: About, Preferences (Cmd+,) and Quit (Cmd+Q) call these actions.
++    // register-session makes GTK install its NSApplication delegate, which opens the files
++    // double-clicked in Finder and handles Dock > Quit, log out and shut down (see _on_startup).
++    property_register_session() = true;
++    add_action("quit", [this]() {
++        // outside of the menu callback: closing may ask about unsaved changes in a dialog
++        Glib::signal_idle().connect_once([this]() {
++            if (not _macos_modal_dialog_open()) {
++                close_all_windows(false/*fromKillCallback*/);
++            }
++        });
++    });
++    add_action("preferences", [this]() {
++        if (CtMainWin* pCtMainWin = _macos_main_win(*this)) {
++            pCtMainWin->get_ct_actions()->dialog_preferences();
++        }
++    });
++    add_action("about", [this]() {
++        if (CtMainWin* pCtMainWin = _macos_main_win(*this)) {
++            pCtMainWin->get_ct_actions()->dialog_about();
++        }
++    });
++#endif // __APPLE__
++
+     _add_main_option_entries();
+     signal_handle_local_options().connect(sigc::mem_fun(*this, &CtApp::_on_handle_local_options), false);
+ 
+@@ -67,12 +124,111 @@ static void kill_callback_handler(int signum)
+     _pCtApp->close_all_windows(true/*fromKillCallback*/);
  }
  
++#if defined(__APPLE__)
++// Dock > Quit, log out, restart and shut down call NSApplication terminate:, which asks the
++// delegate's applicationShouldTerminate:. GTK's version always cancels and runs app.quit later,
++// which also stops the log out or restart, and without the delegate macOS ends the process before
++// CherryTree saves its settings. Instead: with nothing to ask the user, save the settings, close the
++// windows and let macOS go on; otherwise cancel and ask about the unsaved changes.
++static unsigned long _macos_application_should_terminate(id /*self*/, SEL /*cmd*/, id /*sender*/)
++{
++    const unsigned long terminateCancel{0};
++    const unsigned long terminateNow{1};
++    if (not _pCtApp) {
++        return terminateNow;
++    }
++    if (_macos_modal_dialog_open()) {
++        return terminateCancel;
++    }
++    for (Gtk::Window* pWin : _pCtApp->get_windows()) {
++        CtMainWin* pCtMainWin = dynamic_cast<CtMainWin*>(pWin);
++        if (pCtMainWin and (pCtMainWin->get_file_save_needed() or pCtMainWin->get_ct_actions()->get_were_embfiles_opened())) {
++            _pCtApp->activate_action("quit");
++            return terminateCancel;
++        }
++    }
++    _pCtApp->close_all_windows(false/*fromKillCallback*/);
++    return _pCtApp->get_windows().empty() ? terminateNow : terminateCancel;
++}
++
++static void _macos_handle_terminate()
++{
++    Class delegateClass = objc_getClass("GtkApplicationQuartzDelegate");
++    if (delegateClass) {
++        (void)class_replaceMethod(delegateClass, sel_registerName("applicationShouldTerminate:"),
++                                  reinterpret_cast<IMP>(_macos_application_should_terminate), "Q@:@");
++    }
++    else {
++        spdlog::warn("{} GtkApplicationQuartzDelegate not found", __FUNCTION__);
++    }
++}
++#endif // __APPLE__
++
  // small optimization: second instance doesn't need all UI initialization, so we call it on the real startup
 +#if defined(_WIN32) || defined(__APPLE__)
 +// Bundled look: GDK on Windows and macOS reports the system values for gtk-font-name (Segoe UI 9,
@@ -87,6 +201,16 @@ index 48c45af..4ca2ccf 100644
  #if defined(_WIN32)
      (void)fs::alter_TEXMFROOT_env_var();
      (void)fs::alter_PATH_env_var();
+@@ -131,6 +287,9 @@ void CtApp::_on_startup()
+         signal(SIGHUP, kill_callback_handler);  // user’s terminal disconnected
+ #endif // not _WIN32
+         // SIGKILL cannot be handled or ignored, and is therefore always fatal
++#if defined(__APPLE__)
++        _macos_handle_terminate();
++#endif // __APPLE__
+     }
+ }
+ 
 diff --git a/src/ct/ct_config.cc b/src/ct/ct_config.cc
 index 44a7ab1..94d1a9f 100644
 --- a/src/ct/ct_config.cc
