@@ -15,10 +15,10 @@ Subject: Bundled look and settings for the Windows and macOS builds
 Set CHERRYTREE_NATIVE_LOOK=1 to disable the environment defaults.
 ---
 diff --git a/src/ct/ct_app.cc b/src/ct/ct_app.cc
-index 48c45af..a8e6f0e 100644
+index 48c45af..598bb81 100644
 --- a/src/ct/ct_app.cc
 +++ b/src/ct/ct_app.cc
-@@ -28,6 +28,25 @@
+@@ -28,6 +28,38 @@
  #include "config.h"
  #include "ct_logging.h"
  #include <iostream>
@@ -40,11 +40,24 @@ index 48c45af..a8e6f0e 100644
 +    }
 +    return nullptr;
 +}
++
++// macOS lets Cmd+Q and Dock > Quit through while a modal dialog runs (Preferences, a question...):
++// don't close the windows under it, show it instead
++static bool _macos_modal_dialog_open()
++{
++    for (Gtk::Window* pWin : Gtk::Window::list_toplevels()) {
++        if (pWin->get_modal() and pWin->get_visible()) {
++            pWin->present();
++            return true;
++        }
++    }
++    return false;
++}
 +#endif // __APPLE__
  
  CtApp::CtApp(const Glib::ustring application_id_postfix)
   : Gtk::Application{Glib::ustring{"net.giuspen.cherrytree"} + application_id_postfix, Gio::APPLICATION_HANDLES_OPEN}
-@@ -41,6 +60,29 @@ CtApp::CtApp(const Glib::ustring application_id_postfix)
+@@ -41,6 +73,31 @@ CtApp::CtApp(const Glib::ustring application_id_postfix)
          _new_window = true;
      });
  
@@ -56,7 +69,9 @@ index 48c45af..a8e6f0e 100644
 +    add_action("quit", [this]() {
 +        // outside of the menu callback: closing may ask about unsaved changes in a dialog
 +        Glib::signal_idle().connect_once([this]() {
-+            close_all_windows(false/*fromKillCallback*/);
++            if (not _macos_modal_dialog_open()) {
++                close_all_windows(false/*fromKillCallback*/);
++            }
 +        });
 +    });
 +    add_action("preferences", [this]() {
@@ -74,7 +89,7 @@ index 48c45af..a8e6f0e 100644
      _add_main_option_entries();
      signal_handle_local_options().connect(sigc::mem_fun(*this, &CtApp::_on_handle_local_options), false);
  
-@@ -67,12 +109,108 @@ static void kill_callback_handler(int signum)
+@@ -67,12 +124,111 @@ static void kill_callback_handler(int signum)
      _pCtApp->close_all_windows(true/*fromKillCallback*/);
  }
  
@@ -90,6 +105,9 @@ index 48c45af..a8e6f0e 100644
 +    const unsigned long terminateNow{1};
 +    if (not _pCtApp) {
 +        return terminateNow;
++    }
++    if (_macos_modal_dialog_open()) {
++        return terminateCancel;
 +    }
 +    for (Gtk::Window* pWin : _pCtApp->get_windows()) {
 +        CtMainWin* pCtMainWin = dynamic_cast<CtMainWin*>(pWin);
@@ -183,7 +201,7 @@ index 48c45af..a8e6f0e 100644
  #if defined(_WIN32)
      (void)fs::alter_TEXMFROOT_env_var();
      (void)fs::alter_PATH_env_var();
-@@ -131,6 +269,9 @@ void CtApp::_on_startup()
+@@ -131,6 +287,9 @@ void CtApp::_on_startup()
          signal(SIGHUP, kill_callback_handler);  // user’s terminal disconnected
  #endif // not _WIN32
          // SIGKILL cannot be handled or ignored, and is therefore always fatal
