@@ -25,7 +25,17 @@ jobs:
       - name: Build CherryTree.app and the disk image
         run: macos/build-macos.sh --version ${{ matrix.version }}
 
-      - name: Start it and take a screenshot
+      - name: Let the smoke test send CherryTree the macOS Quit command
+        # Automation (Apple Events) permission, granted the way the runner image grants it for other apps
+        run: |
+          now=$(date +%s)
+          for db in "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "/Library/Application Support/com.apple.TCC/TCC.db"; do
+            for client in /bin/bash /usr/bin/osascript /opt/hca/hosted-compute-agent /usr/local/opt/runner/provisioner/provisioner; do
+              sudo sqlite3 "$db" "INSERT OR REPLACE INTO access VALUES('kTCCServiceAppleEvents','$client',1,2,0,1,NULL,NULL,0,'io.github.bisaam.cherrytree',NULL,NULL,$now,NULL,NULL,'UNUSED',$now);"
+            done
+          done
+
+      - name: Start it, take screenshots, quit it with the macOS Quit command
         run: macos/tests/smoke-test.sh work/macos/CherryTree.app smoke
 
       - uses: actions/upload-artifact@v7

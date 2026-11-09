@@ -1,54 +1,97 @@
 #!/usr/bin/env bash
-# Starts CherryTree.app with a fresh profile (bundled defaults + the demo notebook, tree expanded,
-# window maximised), checks it is still running after a while, takes a screenshot, then stops it.
+# Starts CherryTree.app with a fresh profile (bundled defaults + the demo notebook, tree expanded),
+# checks it shows a window, takes screenshots, and quits it with the macOS Quit command (the Apple
+# Event that Dock > Quit, log out and shut down send) to check that it saves its settings:
+#   1. a 900x600 window: screenshot.png, then Quit: CherryTree must exit by itself and write config.cfg
+#   2. the same settings with the window zoomed (maximised): screenshot-zoomed.png, then Quit again
 #   macos/tests/smoke-test.sh <path/to/CherryTree.app> <output dir>
 # Refuses to run if ~/Library/Application Support/CherryTree already exists (real settings).
+# Sending the Quit command needs the Automation permission for osascript (GitHub Actions: granted
+# by the workflow; on a Mac, macOS asks once).
 set -euo pipefail
 APP="$(cd "$1" && pwd)"
 OUT="$(mkdir -p "$2" && cd "$2" && pwd)"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CFG_DIR="${HOME}/Library/Application Support/CherryTree"
+CFG="${CFG_DIR}/config.cfg"
 [ ! -e "${CFG_DIR}" ] || { echo "refusing: ${CFG_DIR} exists (real settings)"; exit 2; }
+BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${APP}/Contents/Info.plist")"
+LAUNCHER="${APP}/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${APP}/Contents/Info.plist")"
 
 T="$(mktemp -d)"
+cleanup() { [ -z "${PID:-}" ] || kill "${PID}" 2>/dev/null || true; rm -rf "${CFG_DIR}" "${T}"; }
+trap cleanup EXIT
 cp "${HERE}/../../windows/tests/Demo Notes.ctd" "${T}/Demo Notes.ctd"
 mkdir -p "${CFG_DIR}"
-python3 - "${APP}/Contents/Resources/share/cherrytree/data/config-default.cfg" "${CFG_DIR}/config.cfg" "${T}/Demo Notes.ctd" <<'EOF'
+python3 - "${APP}/Contents/Resources/share/cherrytree/data/config-default.cfg" "${CFG}" "${T}/Demo Notes.ctd" <<'EOF'
 import sys
 src, dst, doc = sys.argv[1:]
-cfg = open(src).read().replace("[state]\n", f"[state]\ndoc_0={doc}\nnodep_0=1:0\ncurs_0=0\nhpaned_pos=310\nwin_is_maximized=true\n", 1)
+state = (f"[state]\ndoc_0={doc}\nnodep_0=1:0\ncurs_0=0\nhpaned_pos=250\nwin_is_maximized=false\n"
+         "win_position_x=50\nwin_position_y=70\nwin_size_w=900\nwin_size_h=600\n")
+cfg = open(src).read().replace("[state]\n", state, 1)
 cfg += "\n[tree]\nrest_exp_coll=1\n[misc]\nwin_title_doc_dir=false\n"
 open(dst, "w").write(cfg)
 EOF
-
+SEED_SUM="$(shasum "${CFG}" | cut -d' ' -f1)"
 swiftc -O -o "${T}/windows" "${HERE}/windows.swift"
-START=$(date +%s)
-LAUNCHER="${APP}/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${APP}/Contents/Info.plist")"
-"${LAUNCHER}" "${T}/Demo Notes.ctd" > "${OUT}/cherrytree.log" 2>&1 &
-PID=$!
-WAITED=0
-while :; do
-  sleep 5
-  kill -0 "${PID}" 2>/dev/null || { echo "CherryTree exited early:"; cat "${OUT}/cherrytree.log"; exit 1; }
-  "${T}/windows" > "${OUT}/windows.txt" || true
-  WAITED=$(( $(date +%s) - START ))
-  if grep -q "pid=${PID} " "${OUT}/windows.txt"; then echo "window after ${WAITED} s"; break; fi
-  if [ "${WAITED}" -ge 240 ]; then
-    echo "no window after ${WAITED} s; where it is:"
-    ps -o pid,ppid,stat,etime,command -p "${PID}" || true
-    sudo sample "${PID}" 3 -file "${OUT}/sample.txt" || true
-    sudo chmod a+r "${OUT}/sample.txt" 2>/dev/null || true
-    grep -v "^ *[+!:|]* *[0-9]* *???" "${OUT}/sample.txt" | head -200 || true
-    break
+
+# start_app <log>: start CherryTree, wait for its window (up to 240 s)
+start_app() {
+  local log="$1" start waited
+  start=$(date +%s)
+  "${LAUNCHER}" "${T}/Demo Notes.ctd" > "${OUT}/${log}" 2>&1 &
+  PID=$!
+  while :; do
+    sleep 5
+    kill -0 "${PID}" 2>/dev/null || { echo "error: CherryTree exited early:"; cat "${OUT}/${log}"; exit 1; }
+    "${T}/windows" > "${OUT}/windows.txt" || true
+    waited=$(( $(date +%s) - start ))
+    if grep -q "pid=${PID} " "${OUT}/windows.txt"; then echo "window after ${waited} s"; break; fi
+    if [ "${waited}" -ge 240 ]; then
+      echo "error: no window after ${waited} s; where it is:"
+      ps -o pid,ppid,stat,etime,command -p "${PID}" || true
+      sudo sample "${PID}" 3 -file "${OUT}/sample.txt" || true
+      sudo chmod a+r "${OUT}/sample.txt" 2>/dev/null || true
+      grep -v "^ *[+!:|]* *[0-9]* *???" "${OUT}/sample.txt" | head -200 || true
+      exit 1
+    fi
+  done
+  sleep 10  # let it draw
+  "${T}/windows" | grep "pid=${PID} " || true
+}
+
+# quit_app: send the Quit command, CherryTree must exit by itself within 30 s
+quit_app() {
+  local w=0 status=0
+  osascript -e "tell application id \"${BUNDLE_ID}\" to quit" > "${OUT}/quit.log" 2>&1 &
+  local osa=$!
+  while kill -0 "${PID}" 2>/dev/null && [ "${w}" -lt 30 ]; do sleep 1; w=$((w + 1)); done
+  kill "${osa}" 2>/dev/null || true
+  if kill -0 "${PID}" 2>/dev/null; then
+    echo "error: CherryTree still running ${w} s after the Quit command"; cat "${OUT}/quit.log"
+    exit 1
   fi
-done
-du -sh "${HOME}/.cache/fontconfig" 2>/dev/null || true
-sleep 10  # let it draw
-cat "${OUT}/windows.txt"
+  wait "${PID}" || status=$?
+  PID=""
+  echo "quit after ${w} s (exit status ${status})"
+}
+
+echo "=== 1: window 900x600"
+start_app cherrytree.log
 screencapture -x "${OUT}/screenshot.png" || echo "screencapture failed"
-cp "${CFG_DIR}/config.cfg" "${OUT}/config-after-start.cfg" 2>/dev/null || true
-kill "${PID}"; wait "${PID}" 2>/dev/null || true
-rm -rf "${CFG_DIR}" "${T}"
-echo "--- log"; cat "${OUT}/cherrytree.log"
-grep -q "pid=${PID} " "${OUT}/windows.txt" || { echo "error: CherryTree never showed a window"; exit 1; }
-echo "ok: CherryTree window after ${WAITED} s; screenshot in ${OUT}"
+quit_app
+cp "${CFG}" "${OUT}/config-after-quit.cfg" 2>/dev/null || true
+[ "$(shasum "${CFG}" | cut -d' ' -f1)" != "${SEED_SUM}" ] && grep -q '^autosave_on_quit=' "${CFG}" \
+  && grep -q '^win_size_w=' "${CFG}" \
+  || { echo "error: the Quit command didn't save the settings (config.cfg unchanged)"; exit 1; }
+[ ! -e "${CFG}.tmp" ] || { echo "error: settings left in config.cfg.tmp"; exit 1; }
+echo "ok: settings saved on Quit ($(wc -c < "${CFG}" | tr -d ' ') bytes; $(grep -E '^win_(size|position)_' "${CFG}" | tr '\n' ' '))"
+
+echo "=== 2: zoomed window"
+sed -i '' 's/^win_is_maximized=false$/win_is_maximized=true/' "${CFG}"
+start_app cherrytree-zoomed.log
+screencapture -x "${OUT}/screenshot-zoomed.png" || echo "screencapture failed"
+quit_app
+
+echo "--- log"; cat "${OUT}/cherrytree.log" "${OUT}/cherrytree-zoomed.log"
+echo "ok: CherryTree started and quit cleanly twice; screenshots in ${OUT}"

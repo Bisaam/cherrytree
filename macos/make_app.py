@@ -60,6 +60,28 @@ def copytree(src, dst):
     shutil.copytree(src, dst, symlinks=False, dirs_exist_ok=True, copy_function=copyfile)
 
 
+# macOS changes to the Linux GTK settings (look/gtk-3.0/settings.ini); the patch applies the file at
+# application priority:
+#   gtk-xft-dpi 96 (x1024): GTK on macOS assumes 72 dpi, so "Cantarell 11" came out a quarter smaller
+#     than on Linux and Windows; set by the application, it becomes the screen resolution
+#   gtk-xft-rgba none: grey antialiasing like macOS itself, no coloured edges on Retina screens
+MACOS_GTK_SETTINGS = {"gtk-xft-dpi": "98304", "gtk-xft-rgba": "none"}
+
+
+def write_settings_ini(src, dst, overrides):
+    lines, done = [], set()
+    for line in Path(src).read_text().splitlines():
+        key = line.split("=", 1)[0].strip()
+        if "=" in line and key in overrides:
+            line = f"{key}={overrides[key]}"
+            done.add(key)
+        lines.append(line)
+    lines += [f"{k}={v}" for k, v in overrides.items() if k not in done]
+    dst = Path(dst)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text("\n".join(lines) + "\n")
+
+
 def deps_of(path):
     """Install names a Mach-O file links against (without its own id)."""
     lines = run("otool", "-L", path).splitlines()[1:]
@@ -231,13 +253,17 @@ def main():
 
     print("look: theme, icons, editor schemes, default settings, fonts")
     copytree(look / "themes" / "Cherry-Dark", share / "themes" / "Cherry-Dark")
+    macos_css = (mac / "gtk-macos.css").read_text()  # round window corners
+    for css in ("gtk.css", "gtk-dark.css"):
+        theme_css = share / "themes" / "Cherry-Dark" / "gtk-3.0" / css
+        theme_css.write_text(theme_css.read_text() + macos_css)
     copytree(look / "icons" / "Flat-Remix-Blue-Dark", share / "icons" / "Flat-Remix-Blue-Dark")
     for theme in ("Adwaita", "hicolor"):
         copytree(brew / "share" / "icons" / theme, share / "icons" / theme)
     for xml in (look / "styles").glob("*.xml"):
         copyfile(xml, share / "cherrytree" / "styles" / xml.name)
     copyfile(look / "config" / "config.cfg", share / "cherrytree" / "data" / "config-default.cfg")
-    copyfile(look / "gtk-3.0" / "settings.ini", etc / "gtk-3.0" / "settings.ini")
+    write_settings_ini(look / "gtk-3.0" / "settings.ini", etc / "gtk-3.0" / "settings.ini", MACOS_GTK_SETTINGS)
     fonts = share / "fonts" / "cherrytree"
     for f in list(look.glob("fonts/*.otf")) + list(look.glob("fonts/*.ttf")) + list(look.glob("fonts/LICENSE-*.txt")):
         copyfile(f, fonts / f.name)

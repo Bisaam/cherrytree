@@ -1,0 +1,22 @@
+
+/* CherryTree for macOS: added to the end of the bundled Cherry-Dark theme (gtk.css, gtk-dark.css)
+   by macos/make_app.py. macOS windows have four round corners, also when zoomed (only full screen
+   is square); the Linux theme rounds the top ones only and squares them when a window is maximised.
+   Popup menus and tooltips keep their own shapes. */
+
+/* shadow and outline around the window */
+.background.csd:not(.popup):not(.solid-csd):not(.fullscreen):not(tooltip) > decoration {
+  border-radius: 10px; }
+
+/* window background below the titlebar */
+.background.csd:not(.popup):not(.solid-csd):not(.fullscreen):not(tooltip) {
+  border-radius: 0 0 10px 10px; }
+
+/* titlebar */
+.background.csd:not(.popup):not(.solid-csd):not(.fullscreen):not(tooltip) > .titlebar {
+  border-radius: 10px 10px 0 0; }
+
+/* keep the status bar text clear of the round bottom corners */
+.ct-status-bar {
+  padding-left: 6px;
+  padding-right: 6px; }

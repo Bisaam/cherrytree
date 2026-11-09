@@ -73,13 +73,14 @@ for d in "${BREW}"/opt/*/lib/pkgconfig "${BREW}"/opt/*/share/pkgconfig; do
   PKG_CONFIG_PATH="${PKG_CONFIG_PATH:+${PKG_CONFIG_PATH}:}${d}"
 done
 export PKG_CONFIG_PATH
+# -lobjc: the patch replaces a method of GTK's NSApplication delegate (macOS quit handling)
 cmake -S "${SRC}" -B "${BUILD}" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
   -DCMAKE_INSTALL_PREFIX="${INSTALL}" \
   -DCMAKE_FIND_FRAMEWORK=LAST \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | cut -d. -f1).0" \
   -DCMAKE_CXX_FLAGS="-I${BREW}/include" \
-  -DCMAKE_EXE_LINKER_FLAGS="-L${BREW}/lib -lxml2" \
+  -DCMAKE_EXE_LINKER_FLAGS="-L${BREW}/lib -lxml2 -lobjc" \
   ${CMAKE_EXTRA[@]+"${CMAKE_EXTRA[@]}"}
 cmake --build "${BUILD}"
 cmake --install "${BUILD}"
