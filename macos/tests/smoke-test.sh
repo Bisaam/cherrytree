@@ -2,7 +2,7 @@
 # Starts CherryTree.app with a fresh profile (bundled defaults + the demo notebook, tree expanded),
 # checks it shows a window, takes screenshots, and quits it with the macOS Quit command (the Apple
 # Event that Dock > Quit, log out and shut down send) to check that it saves its settings:
-#   1. a 900x600 window: screenshot.png, then Quit: CherryTree must exit by itself and write config.cfg
+#   1. a 900x540 window: screenshot.png, then Quit: CherryTree must exit by itself and write config.cfg
 #   2. zoom the window (double-click on the titlebar, as a user does): screenshot-zoomed.png, Quit,
 #      and config.cfg must say win_is_maximized=true
 #   macos/tests/smoke-test.sh <path/to/CherryTree.app> <output dir>
@@ -78,7 +78,7 @@ quit_app() {
   echo "quit after ${w} s (exit status ${status})"
 }
 
-echo "=== 1: window 900x600"
+echo "=== 1: window 900x540"
 start_app cherrytree.log
 screencapture -x "${OUT}/screenshot.png" || echo "screencapture failed"
 quit_app

@@ -41,7 +41,9 @@ A Mac with Apple silicon (M1 or newer) and macOS 15 Sequoia or newer. Open the `
 
 The app isn't notarized by Apple, so the first time macOS says it can't check CherryTree for malware. Try to open it once, then go to *System Settings › Privacy & Security*, scroll down and click *Open Anyway*. Or run `xattr -dr com.apple.quarantine /Applications/CherryTree.app` once in Terminal.
 
-Settings are kept in `~/Library/Application Support/CherryTree`, separate from a Homebrew CherryTree.
+Settings are kept in `~/Library/Application Support/CherryTree`, separate from a Homebrew CherryTree. Quitting with *CherryTree › Quit CherryTree* (⌘Q), from the Dock, or by logging out saves them (window size, fonts, last notebook). If a notebook has unsaved changes, CherryTree asks first.
+
+Differences from the Linux look, to fit macOS: all four window corners are round, also when the window is zoomed. Fonts use grey antialiasing instead of coloured subpixel edges, which look blurry on Retina screens. Text is the same size as on Linux and Windows (96 dpi; GTK on macOS would otherwise draw it a quarter smaller).
 
 ![CherryTree 1.7.2 on macOS 15](screenshots/macos-1.7.2.png)
 
@@ -62,6 +64,7 @@ Source changes for Windows and macOS are in `patches/<version>/0002-bundled-look
 * use fontconfig + FreeType text rendering (`PANGOCAIRO_BACKEND=fc`) so fonts render like on Linux, not like ClearType
 * re-apply `etc/gtk-3.0/settings.ini` at application priority, because GTK otherwise forces the system UI font (Segoe UI 9 on Windows, the macOS system font) and, on Windows, full hinting over it
 * macOS: find the data folders inside `CherryTree.app/Contents/Resources`
+* macOS: make *About*, *Preferences* (⌘,) and *Quit* (⌘Q) in the application menu work. Dock › Quit, log out and shut down save the settings, and ask about unsaved changes, instead of ending CherryTree straight away
 * let the GTK theme draw every titlebar (`GTK_CSD=1`)
 * fix the upstream bug where a headerbar window can't be minimised by clicking its taskbar button ([giuspen/cherrytree#1917](https://github.com/giuspen/cherrytree/issues/1917))
 
@@ -101,7 +104,7 @@ On a Mac with [Homebrew](https://brew.sh):
 macos/build-macos.sh --version 1.7.2        # → dist/cherrytree_1.7.2_macos_arm64.dmg
 ```
 
-It installs the Homebrew packages, builds CherryTree, and `macos/make_app.py` assembles `CherryTree.app`. Every Homebrew library it loads goes inside the bundle with `@loader_path` references, and the app is signed ad hoc. The build fails if anything still points outside the bundle. GitHub Actions does the same on every push (`.github/workflows/macos.yml`, macOS 15 runners) and also starts the app and takes a screenshot (`macos/tests/smoke-test.sh`).
+It installs the Homebrew packages, builds CherryTree, and `macos/make_app.py` assembles `CherryTree.app`. Every Homebrew library it loads goes inside the bundle with `@loader_path` references, and the app is signed ad hoc. The build fails if anything still points outside the bundle. The macOS-only look changes are in `macos/gtk-macos.css` (round corners), `macos/99-cherrytree-macos-fonts.conf` and `MACOS_GTK_SETTINGS` in `make_app.py`. GitHub Actions does the same build on every push (`.github/workflows/macos.yml`, macOS 15 runners). It also starts the app, takes screenshots, and quits it with the macOS Quit command to check that the settings get saved (`macos/tests/smoke-test.sh`).
 
 Both releases need `libxml++-2.6`, which MSYS2 dropped in Oct 2026. The build installs and bundles the last archived package, which was built against the current `libxml2` ABI. The libxml++ flavour is read from each release's own `CMakeLists.txt` (upstream's main branch has moved to `libxml++-5.0`), and the DLL check fails the build if the bundled runtime doesn't match what the binary links against.
 
